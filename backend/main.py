@@ -13,7 +13,7 @@ client = OpenAI()
 
 app = FastAPI()
 
-# Define allowed origins BEFORE adding the middleware
+# --- CORS Configuration ---
 allowed_origins = [
     "https://promptodactyl.com",
     "https://www.promptodactyl.com",
@@ -25,7 +25,6 @@ allowed_origins = [
 if os.getenv("ALLOWED_ORIGINS"):
     allowed_origins.extend(os.getenv("ALLOWED_ORIGINS").split(","))
 
-# Add CORS middleware AFTER defining allowed_origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
@@ -35,31 +34,33 @@ app.add_middleware(
 )
 
 
+# --- Data Model ---
 class Prompt(BaseModel):
     text: str
 
-    @validator('text')
+    @validator("text")
     def validate_text(cls, v):
         v = v.strip()
         if len(v) < 10:
-            raise ValueError('Prompt must be at least 10 characters')
+            raise ValueError("Prompt must be at least 10 characters")
         if len(v) > 2000:
-            raise ValueError('Prompt must be less than 2000 characters')
+            raise ValueError("Prompt must be less than 2000 characters")
         return v
 
+
+# --- Routes ---
 @app.get("/")
 async def root():
-    return {
-        "service": "PromptRefine API",
-        "status": "running",
-        "version": "1.0.0"
-    }
+    return {"service": "Promptodactyl API", "status": "running", "version": "1.0.0"}
+
 
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
 
-@a@app.post("/refine")
+
+# --- Core Refinement Endpoint ---
+@app.post("/refine")
 async def refine_prompt(data: Prompt):
     try:
         logger.info(f"Refining prompt of length: {len(data.text)}")
@@ -82,7 +83,7 @@ Return only valid JSON with exactly these keys:
 - why: a concise explanation (2–3 sentences) describing what structural and analytical improvements were applied.
 """
 
-        # Optional automatic context detection for smarter refinements
+        # Context-aware hinting
         lower_text = data.text.lower()
         if "marketing" in lower_text:
             context_hint = (
@@ -143,6 +144,76 @@ Return valid JSON only.
         raise HTTPException(status_code=500, detail=f"Refinement failed: {str(e)}")
 
 
+# --- Enhancement Endpoint (Second-Stage Refinement) ---
+@app.post("/enhance")
+async def enhance_prompt(data: dict):
+    """
+    Accepts a refined prompt and optional context details for deeper optimization.
+    Expected keys: 'refined', 'outcome', 'audience', 'constraints'
+    """
+    try:
+        base_prompt = data.get("refined", "")
+        outcome = data.get("outcome", "")
+        audience = data.get("audience", "")
+        constraints = data.get("constraints", "")
+
+        logger.info("Enhancing refined prompt")
+
+        system_prompt = """
+You are a senior prompt optimization specialist.
+Your task is to take an already refined prompt and elevate it further using
+the additional context provided. The goal is to make the final prompt maximally
+precise, contextual, and aligned with the intended audience and purpose.
+
+When enhancing:
+1. Preserve the structure and clarity of the refined prompt.
+2. Integrate the user’s specific outcome, audience, and constraints directly into the wording.
+3. Strengthen any analytical or reasoning requirements if relevant.
+4. Maintain brevity and usability — this should be a polished, ready-to-use prompt.
+
+Return valid JSON only with:
+- before: the original refined prompt
+- after: the enhanced version
+- why: what specific contextual adjustments were made
+"""
+
+        user_prompt = f"""
+Refined prompt to improve:
+{base_prompt}
+
+Additional details:
+- Desired outcome: {outcome or "not specified"}
+- Intended audience: {audience or "not specified"}
+- Constraints/requirements: {constraints or "not specified"}
+
+Enhance and return valid JSON only.
+"""
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            temperature=0.4,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+        )
+
+        content = response.choices[0].message.content
+        result = json.loads(content)
+
+        if not all(k in result for k in ["before", "after", "why"]):
+            raise ValueError("Invalid response structure from AI")
+
+        logger.info("Enhancement successful")
+        return result
+
+    except Exception as e:
+        logger.error(f"Enhancement error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Enhancement failed: {str(e)}")
+
+
+# --- Run Locally ---
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
