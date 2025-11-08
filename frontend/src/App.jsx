@@ -10,6 +10,7 @@ export default function App() {
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
   const [copiedEnhanced, setCopiedEnhanced] = useState(false);
+  const [showPolicy, setShowPolicy] = useState(false);
 
   const [audience, setAudience] = useState("");
   const [outcome, setOutcome] = useState("");
