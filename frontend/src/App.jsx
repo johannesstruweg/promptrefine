@@ -408,6 +408,6 @@ export default function App() {
           </div>
         </div>
       )}
-    </main>  {/* ✅ <--- This must close your <main> element */}
+    </main>  
   );
 }
