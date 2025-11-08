@@ -379,7 +379,7 @@ export default function App() {
         ×
       </button>
       <h2 className="text-lg font-semibold mb-3">Privacy Policy</h2>
-      <p>Last updated: November 2025</p>
+      <p>Last updated:  11.2025</p>
       <p className="mt-4">Promptodactyl is designed to work without collecting personal information. Your prompts and creative flow belong entirely to you.</p>
       <p className="mt-4">We don’t collect email addresses, names, logins, cookies, browsing history, or analytics data. No prompt content is ever stored on our servers.</p>
       <p className="mt-4">Your optimization history lives in your browser using localStorage. It never leaves your device. You can clear it anytime from your browser or the History page.</p>
