@@ -1,6 +1,5 @@
 import { useState, useRef } from "react";
 import axios from "axios";
-import { Globe } from "./components/Globe"; // ensure this file exists
 
 export default function App() {
   const [text, setText] = useState("");
@@ -103,13 +102,7 @@ export default function App() {
   return (
     <main className="relative min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-start overflow-hidden p-4 sm:p-6">
 
-      {/* Globe Background */}
-      <div className="fixed top-[-120px] left-0 w-full flex justify-center pointer-events-none opacity-50 z-0">
-        <div className="w-[480px] h-[480px] sm:w-[600px] sm:h-[600px]">
-          <Globe maxWidth={600} maxHeight={600} />
-        </div>
-      </div>
-
+    
       {/* Header */}
       <div className="text-center mb-8 relative z-10">
         <img
@@ -171,7 +164,7 @@ export default function App() {
               className="text-sm font-semibold text-blue-600 uppercase mb-2 cursor-pointer select-none hover:underline"
               onClick={handleCopy}
             >
-              NEW – tap to copy
+              NEW – click/tap to copy
             </h2>
             <p
               className="text-gray-800 leading-relaxed font-medium cursor-pointer select-text"
