@@ -59,40 +59,79 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
-@app.post("/refine")
+@a@app.post("/refine")
 async def refine_prompt(data: Prompt):
     try:
         logger.info(f"Refining prompt of length: {len(data.text)}")
-        
-        system_prompt = """You are an expert prompt engineer. 
-Analyze the user's prompt and improve it for clarity, precision, and effectiveness.
-Return ONLY valid JSON with exactly these keys:
-- before: the original prompt (string)
-- after: the improved prompt (string)
-- why: a brief explanation of improvements (string, 1-2 sentences)"""
 
-        user_prompt = f"""Improve this prompt:
+        system_prompt = """
+You are an expert prompt engineer and AI strategy consultant.
+Your job is to transform ordinary or vague user prompts into strategically structured, expert-level prompts that lead to deeper, more actionable LLM outputs.
+
+When refining a prompt:
+1. Define a relevant expert role (for example, “Act as a manufacturing efficiency analyst”) to frame the model’s perspective.
+2. Add clear objectives and constraints that guide the reasoning process.
+3. Structure the output format into explicit sections when appropriate (for example, Analysis, Recommendations, Risks, Implementation Steps).
+4. Require quantitative or comparative reasoning where it strengthens decision-making (for example, estimates, benchmarks, risk scores, timelines).
+5. Maintain the original intent but enhance clarity, precision, and analytical depth.
+6. Keep the result professional, concise, and immediately usable.
+
+Return only valid JSON with exactly these keys:
+- before: the original prompt
+- after: the improved prompt
+- why: a concise explanation (2–3 sentences) describing what structural and analytical improvements were applied.
+"""
+
+        # Optional automatic context detection for smarter refinements
+        lower_text = data.text.lower()
+        if "marketing" in lower_text:
+            context_hint = (
+                "This prompt appears related to marketing or communication. "
+                "Emphasize audience clarity, tone, and measurable outcomes."
+            )
+        elif "manufacturing" in lower_text:
+            context_hint = (
+                "This prompt appears related to manufacturing or process optimization. "
+                "Emphasize quantitative evaluation, efficiency metrics, and implementation steps."
+            )
+        elif "strategy" in lower_text or "business" in lower_text:
+            context_hint = (
+                "This prompt appears related to business or strategic decision-making. "
+                "Focus on data-driven recommendations, competitive analysis, and actionable next steps."
+            )
+        else:
+            context_hint = (
+                "General improvement: clarify the purpose, structure the response, and strengthen analytical guidance."
+            )
+
+        user_prompt = f"""
+{context_hint}
+
+Refine and enhance the following prompt according to your system instructions:
 
 {data.text}
 
-Return valid JSON only."""
+Focus on improving depth, structure, and analytical guidance.
+Ensure the rewritten prompt defines a role, objective, and structured output format.
+Return valid JSON only.
+"""
 
         response = client.chat.completions.create(
-            model="gpt-4-turbo-preview",
+            model="gpt-4o-mini",
             temperature=0.4,
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ]
+                {"role": "user", "content": user_prompt},
+            ],
         )
 
         content = response.choices[0].message.content
         result = json.loads(content)
-        
-        if not all(key in result for key in ["before", "after", "why"]):
+
+        if not all(k in result for k in ["before", "after", "why"]):
             raise ValueError("Invalid response structure from AI")
-        
+
         logger.info("Refinement successful")
         return result
 
@@ -102,6 +141,7 @@ Return valid JSON only."""
     except Exception as e:
         logger.error(f"Refinement error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Refinement failed: {str(e)}")
+
 
 if __name__ == "__main__":
     import uvicorn
