@@ -349,7 +349,7 @@ export default function App() {
       {/* Footer */}
       <footer className="text-center mt-16 mb-4 text-gray-500 text-sm relative z-10">
         <p>
-          Powered by GPT-4 • © 2025 Promptodactyl by{" "}
+          Powered by GPT-5 • © 2025 Promptodactyl by{" "}
           <a
             href="https://stratagentic.ai"
             target="_blank"
