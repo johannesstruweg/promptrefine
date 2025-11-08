@@ -90,12 +90,13 @@ export default function App() {
     }
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-      handleRefine();
-    }
-  };
-
+const handleKeyDown = (e) => {
+  // Pressing Shift+Enter makes a new line instead of submitting
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    handleRefine();
+  }
+};
   const charCount = text.length;
   const isValid = charCount >= 10 && charCount <= 2000;
 
