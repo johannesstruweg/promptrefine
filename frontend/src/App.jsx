@@ -120,7 +120,7 @@ export default function App() {
           className={`w-full p-4 border-2 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 ${
             error ? "border-red-300" : "border-gray-200"
           }`}
-          placeholder="Paste your prompt here..."
+          placeholder="Type/Paste your prompt here..."
           value={text}
           onChange={(e) => {
             setText(e.target.value);
