@@ -16,11 +16,11 @@ app = FastAPI()
 allowed_origins = [
     "http://localhost:5173",
     "http://localhost:3000",
-    "https://vercel.com/johannes-projects-e398a402/promptodactyl/2Cjmc9Y61NVb1zpcKqYiAsdUBoVt"
-    "https://promptodactyl.vercel.app/"
-    "https://promptodactyl-git-main-johannes-projects-e398a402.vercel.app/"
-    "https://promptodactyl-3neeiq0ck-johannes-projects-e398a402.vercel.app/"
+    "https://promptodactyl.vercel.app",
+    "https://promptodactyl-git-main-johannes-projects-e398a402.vercel.app",
+    "https://promptodactyl-3neeiq0ck-johannes-projects-e398a402.vercel.app"
 ]
+
 
 if os.getenv("ALLOWED_ORIGINS"):
     allowed_origins.extend(os.getenv("ALLOWED_ORIGINS").split(","))
