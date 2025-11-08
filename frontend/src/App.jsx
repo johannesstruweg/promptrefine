@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import axios from "axios";
-import { Globe } from "./components/Globe"; // make sure this file exists in /src/components
+import { Globe } from "./components/Globe"; // ensure this file exists
 
 export default function App() {
   const [text, setText] = useState("");
@@ -79,16 +79,15 @@ export default function App() {
     }
   };
 
-  // --- Copy output ---
+  // --- Copy output (tap-to-copy) ---
   const handleCopy = async () => {
-    if (res?.after) {
-      try {
-        await navigator.clipboard.writeText(res.after);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (err) {
-        console.error("Copy failed:", err);
-      }
+    if (!res?.after) return;
+    try {
+      await navigator.clipboard.writeText(res.after);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (err) {
+      console.error("Copy failed:", err);
     }
   };
 
@@ -104,182 +103,147 @@ export default function App() {
   return (
     <main className="relative min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-start overflow-hidden p-4 sm:p-6">
 
-      {/* 🌍 Fixed Globe Background */}
-      <div className="fixed top-[-120px] left-0 w-full flex justify-center pointer-events-none opacity-60 z-0">
+      {/* Globe Background */}
+      <div className="fixed top-[-120px] left-0 w-full flex justify-center pointer-events-none opacity-50 z-0">
         <div className="w-[480px] h-[480px] sm:w-[600px] sm:h-[600px]">
           <Globe maxWidth={600} maxHeight={600} />
         </div>
       </div>
 
-      {/* Header Section */}
-    <div className="text-center mb-8 relative z-10">
- <img
-  src="/Promptodactyl_logo.png"
-  alt="Promptodactyl Logo"
-  className="mx-auto mb-4 w-48 sm:w-56 md:w-64 h-auto transition-transform hover:scale-105"
-/>
-
-  <p className="text-gray-600 text-lg">
-    Clarity is power. Refine your prompt.
-  </p>
-</div>
-
+      {/* Header */}
+      <div className="text-center mb-8 relative z-10">
+        <img
+          src="/Promptodactyl_logo.png"
+          alt="Promptodactyl Logo"
+          className="mx-auto mb-4 w-48 sm:w-56 md:w-64 h-auto transition-transform hover:scale-105"
+        />
+        <p className="text-gray-600 text-lg">Clarity is power. Refine your prompt.</p>
+      </div>
 
       {/* Input Section */}
-      <div className="w-full max-w-3xl bg-white rounded-xl shadow-lg p-6 sm:p-8 relative z-10">
-        <div className="relative">
-          <textarea
-            rows={8}
-            className={`w-full p-4 border-2 rounded-lg transition-colors resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              error ? "border-red-300" : "border-gray-200"
-            }`}
-            placeholder="Paste your prompt here... (Press Cmd/Ctrl + Enter to refine)"
-            value={text}
-            onChange={(e) => {
-              setText(e.target.value);
-              setError(null);
-            }}
-            onKeyDown={handleKeyDown}
-            disabled={loading}
-            aria-label="Prompt input"
-            aria-describedby="char-count"
-          />
-          <div
-            id="char-count"
-            className={`text-sm mt-2 ${
-              !isValid && charCount > 0 ? "text-red-500" : "text-gray-500"
-            }`}
+      <div className="w-full max-w-3xl bg-white/70 backdrop-blur-sm rounded-xl border border-gray-200 shadow-sm p-6 relative z-10">
+        <textarea
+          rows={8}
+          className={`w-full p-4 border-2 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 ${
+            error ? "border-red-300" : "border-gray-200"
+          }`}
+          placeholder="Paste your prompt here..."
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            setError(null);
+          }}
+          onKeyDown={handleKeyDown}
+          disabled={loading}
+          aria-label="Prompt input"
+          aria-describedby="char-count"
+        />
+        <div
+          id="char-count"
+          className={`text-sm mt-2 flex justify-between ${
+            !isValid && charCount > 0 ? "text-red-500" : "text-gray-500"
+          }`}
+        >
+          <span>{charCount} / 2000 characters</span>
+          <button
+            onClick={handleRefine}
+            disabled={loading || !isValid}
+            className="text-sm bg-blue-600 text-white rounded-full px-5 py-1.5 hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            {charCount} / 2000 characters{" "}
-            {charCount > 0 && charCount < 10 && "(minimum 10)"}
-          </div>
+            {loading ? "Refining..." : "Refine"}
+          </button>
         </div>
 
         {error && (
-          <div
-            className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700"
-            role="alert"
-          >
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
             {error}
           </div>
         )}
-
-        <button
-          onClick={handleRefine}
-          disabled={loading || !isValid}
-          className="w-full mt-4 bg-blue-600 text-white font-medium py-3 px-6 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-          aria-label={loading ? "Refining prompt" : "Refine prompt"}
-        >
-          {loading ? (
-            <>
-              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                  fill="none"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
-              </svg>
-              <span>Refining...</span>
-            </>
-          ) : (
-            "Refine Prompt"
-          )}
-        </button>
       </div>
 
-      {/* Output Sections */}
+      {/* Output */}
       {res && (
-        <div ref={resultRef} className="mt-8 space-y-6 animate-fade-in w-full max-w-3xl relative z-10">
-          <section className="bg-white rounded-xl shadow-lg p-6">
-            <h2 className="font-semibold text-sm text-gray-500 uppercase tracking-wide mb-3">
-              Before
-            </h2>
-            <p className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 leading-relaxed">
-              {res.before}
-            </p>
-          </section>
+        <div ref={resultRef} className="mt-12 w-full max-w-3xl mx-auto relative z-10 space-y-10">
 
-          <section className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex justify-between items-center mb-3">
-              <h2 className="font-semibold text-sm text-blue-600 uppercase tracking-wide">
-                After
-              </h2>
-              <button
-                onClick={handleCopy}
-                className="text-sm px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md transition-colors flex items-center gap-1"
-                aria-label="Copy refined prompt"
-              >
-                {copied ? "✅ Copied!" : "📋 Copy"}
-              </button>
-            </div>
-            <p className="p-4 bg-blue-50 border-2 border-blue-200 rounded-lg text-gray-800 leading-relaxed font-medium">
+          {/* NEW (was After) */}
+          <section>
+            <h2
+              className="text-sm font-semibold text-blue-600 uppercase mb-2 cursor-pointer select-none hover:underline"
+              onClick={handleCopy}
+            >
+              NEW – tap to copy
+            </h2>
+            <p
+              className="text-gray-800 leading-relaxed font-medium cursor-pointer select-text"
+              onClick={handleCopy}
+            >
               {res.after}
             </p>
+            {copied && (
+              <span className="text-xs text-green-600">(Copied!)</span>
+            )}
           </section>
 
-          <section className="bg-white rounded-xl shadow-lg p-6">
-            <h2 className="font-semibold text-sm text-gray-500 uppercase tracking-wide mb-3">
+          {/* Original (was Before) */}
+          <section>
+            <h2 className="text-sm font-semibold text-gray-600 uppercase mb-2">
+              Original
+            </h2>
+            <p className="text-gray-700 leading-relaxed">{res.before}</p>
+          </section>
+
+          {/* Why it's better */}
+          <section>
+            <h2 className="text-sm font-semibold text-gray-600 uppercase mb-2">
               Why it's better
             </h2>
-            <p className="p-4 bg-green-50 border border-green-200 rounded-lg text-gray-700 leading-relaxed">
-              {res.why}
-            </p>
+            <p className="text-gray-700 leading-relaxed">{res.why}</p>
           </section>
 
-          {/* Inline Enhancement Section */}
-          <section className="bg-white rounded-xl shadow-lg p-6">
-            <p className="text-sm text-gray-500 mb-4">
-              Add more detail to improve even further
-            </p>
-
-            <div className="space-y-3">
-              <input
-                type="text"
-                placeholder="Who’s this for?"
-                value={audience}
-                onChange={(e) => setAudience(e.target.value)}
-                className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 placeholder-gray-400"
-              />
-              <input
-                type="text"
-                placeholder="What result are you hoping for?"
-                value={outcome}
-                onChange={(e) => setOutcome(e.target.value)}
-                className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 placeholder-gray-400"
-              />
-              <input
-                type="text"
-                placeholder="Anything else I should consider?"
-                value={constraints}
-                onChange={(e) => setConstraints(e.target.value)}
-                className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 placeholder-gray-400"
-              />
+          {/* Enhance */}
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold text-gray-600 uppercase mb-2">
+              Enhance
+            </h2>
+            <input
+              type="text"
+              placeholder="Who’s this for?"
+              value={audience}
+              onChange={(e) => setAudience(e.target.value)}
+              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+            <input
+              type="text"
+              placeholder="What result are you hoping for?"
+              value={outcome}
+              onChange={(e) => setOutcome(e.target.value)}
+              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+            <input
+              type="text"
+              placeholder="Anything else to consider?"
+              value={constraints}
+              onChange={(e) => setConstraints(e.target.value)}
+              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+            <div className="text-right">
+              <button
+                onClick={handleEnhance}
+                disabled={enhancing}
+                className="text-sm bg-blue-600 text-white rounded-full px-5 py-1.5 hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                {enhancing ? "Enhancing..." : "Enhance"}
+              </button>
             </div>
-
-            <button
-              onClick={handleEnhance}
-              disabled={enhancing}
-              className="w-full mt-4 bg-blue-600 text-white font-medium py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed"
-            >
-              {enhancing ? "⏳ Enhancing..." : "Enhance Prompt"}
-            </button>
           </section>
 
+          {/* Enhanced Version */}
           {enhanced && (
-            <section className="bg-blue-50 rounded-xl shadow-lg p-6">
-              <h2 className="font-semibold text-blue-700 text-sm uppercase mb-2">
+            <section>
+              <h2 className="text-sm font-semibold text-blue-700 uppercase mb-2">
                 Enhanced Version
               </h2>
-              <p className="p-4 bg-white border border-blue-200 rounded-lg text-gray-800 leading-relaxed font-medium">
+              <p className="text-gray-800 leading-relaxed font-medium">
                 {enhanced.after}
               </p>
               <p className="text-sm text-gray-500 mt-2">{enhanced.why}</p>
@@ -289,9 +253,9 @@ export default function App() {
       )}
 
       {/* Footer */}
-      <div className="text-center mt-12 text-gray-500 text-sm relative z-10">
+      <footer className="text-center mt-16 mb-8 text-gray-500 text-sm relative z-10">
         <p>Powered by GPT-4 • © 2025 Promptodactyl by stratagentic.ai 🇳🇴</p>
-      </div>
+      </footer>
     </main>
   );
 }
