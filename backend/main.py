@@ -103,16 +103,3 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
 ```
-
-4. Click **"Commit new file"**
-
-5. Click **"Add file"** → **"Create new file"** again
-6. Name: `backend/requirements.txt`
-7. Paste:
-```
-fastapi==0.115.5
-uvicorn[standard]==0.32.1
-openai==1.57.2
-pydantic==2.10.4
-python-multipart==0.0.20
-httpx==0.27.2
