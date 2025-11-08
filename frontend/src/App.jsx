@@ -91,12 +91,13 @@ export default function App() {
   };
 
 const handleKeyDown = (e) => {
-  // Pressing Shift+Enter makes a new line instead of submitting
+  // If Enter is pressed without Shift, submit the prompt
   if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    handleRefine();
+    e.preventDefault();   // stop newline from being added
+    handleRefine();       // run the refinement
   }
 };
+
   const charCount = text.length;
   const isValid = charCount >= 10 && charCount <= 2000;
 
