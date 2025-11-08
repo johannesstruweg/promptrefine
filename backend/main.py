@@ -16,7 +16,7 @@ app = FastAPI()
 allowed_origins = [
     "http://localhost:5173",
     "http://localhost:3000",
-    "https://promptrefine.vercel.app"
+    "https://vercel.com/johannes-projects-e398a402/promptodactyl/2Cjmc9Y61NVb1zpcKqYiAsdUBoVt"
 ]
 
 if os.getenv("ALLOWED_ORIGINS"):
