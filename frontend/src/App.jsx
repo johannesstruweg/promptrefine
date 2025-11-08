@@ -112,14 +112,18 @@ export default function App() {
       </div>
 
       {/* Header Section */}
-      <div className="relative text-center mt-24 mb-10 z-10">
-        <h1 className="text-5xl sm:text-6xl font-bold text-gray-900 mb-3">
-          Promptodactyl!
-        </h1>
-        <p className="text-gray-600 text-lg">
-          Clarity is power. Refine your prompt.
-        </p>
-      </div>
+    <div className="text-center mb-8 relative z-10">
+ <img
+  src="/Promptodactyl_logo.png"
+  alt="Promptodactyl Logo"
+  className="mx-auto mb-4 w-48 sm:w-56 md:w-64 h-auto transition-transform hover:scale-105"
+/>
+
+  <p className="text-gray-600 text-lg">
+    Clarity is power. Refine your prompt.
+  </p>
+</div>
+
 
       {/* Input Section */}
       <div className="w-full max-w-3xl bg-white rounded-xl shadow-lg p-6 sm:p-8 relative z-10">
