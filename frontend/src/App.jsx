@@ -211,21 +211,3 @@ export default function App() {
 
 ---
 
-## ✅ **Step 4: Verify Structure**
-
-Your repo should now look like:
-```
-promptrefine/
-├── backend/
-│   ├── main.py
-│   └── requirements.txt
-└── frontend/
-    ├── src/
-    │   ├── App.jsx
-    │   ├── main.jsx
-    │   └── index.css
-    ├── index.html
-    ├── package.json
-    ├── vite.config.js
-    ├── tailwind.config.js
-    └── postcss.config.js
