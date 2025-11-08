@@ -4,16 +4,23 @@ import axios from "axios";
 export default function App() {
   const [text, setText] = useState("");
   const [res, setRes] = useState(null);
+  const [enhanced, setEnhanced] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
-  const resultRef = useRef(null);
 
+  const [audience, setAudience] = useState("");
+  const [outcome, setOutcome] = useState("");
+  const [constraints, setConstraints] = useState("");
+
+  const resultRef = useRef(null);
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
+  // --- Handle first refinement ---
   const handleRefine = async () => {
     const trimmed = text.trim();
-    
+
     if (trimmed.length < 10) {
       setError("Please enter at least 10 characters");
       return;
@@ -25,18 +32,19 @@ export default function App() {
 
     setLoading(true);
     setRes(null);
+    setEnhanced(null);
     setError(null);
     setCopied(false);
 
     try {
       const response = await axios.post(`${API_URL}/refine`, { text: trimmed });
       setRes(response.data);
-      
       setTimeout(() => {
         resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     } catch (err) {
-      const message = err.response?.data?.detail || "Something went wrong. Please try again.";
+      const message =
+        err.response?.data?.detail || "Something went wrong. Please try again.";
       setError(message);
       console.error("Refinement error:", err);
     } finally {
@@ -44,6 +52,33 @@ export default function App() {
     }
   };
 
+  // --- Handle second-stage enhancement ---
+  const handleEnhance = async () => {
+    if (!res?.after) return;
+    setEnhancing(true);
+    setEnhanced(null);
+    setError(null);
+
+    try {
+      const response = await axios.post(`${API_URL}/enhance`, {
+        refined: res.after,
+        audience,
+        outcome,
+        constraints,
+      });
+      setEnhanced(response.data);
+      setTimeout(() => {
+        resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    } catch (err) {
+      console.error("Enhancement failed:", err);
+      setError("Enhancement failed. Please try again.");
+    } finally {
+      setEnhancing(false);
+    }
+  };
+
+  // --- Copy output ---
   const handleCopy = async () => {
     if (res?.after) {
       try {
@@ -77,6 +112,7 @@ export default function App() {
           </p>
         </div>
 
+        {/* Input Section */}
         <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
           <div className="relative">
             <textarea
@@ -95,18 +131,21 @@ export default function App() {
               aria-label="Prompt input"
               aria-describedby="char-count"
             />
-            <div 
+            <div
               id="char-count"
               className={`text-sm mt-2 ${
-                !isValid && charCount > 0 ? "text-red-500" : "text-gray-500"
+                !isValid && charCount > 0
+                  ? "text-red-500"
+                  : "text-gray-500"
               }`}
             >
-              {charCount} / 2000 characters {charCount > 0 && charCount < 10 && "(minimum 10)"}
+              {charCount} / 2000 characters{" "}
+              {charCount > 0 && charCount < 10 && "(minimum 10)"}
             </div>
           </div>
 
           {error && (
-            <div 
+            <div
               className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700"
               role="alert"
             >
@@ -146,6 +185,7 @@ export default function App() {
           </button>
         </div>
 
+        {/* Output Sections */}
         {res && (
           <div ref={resultRef} className="mt-8 space-y-6 animate-fade-in">
             <section className="bg-white rounded-xl shadow-lg p-6">
@@ -169,15 +209,33 @@ export default function App() {
                 >
                   {copied ? (
                     <>
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                       Copied!
                     </>
                   ) : (
                     <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                        />
                       </svg>
                       Copy
                     </>
@@ -197,11 +255,87 @@ export default function App() {
                 {res.why}
               </p>
             </section>
+
+            {/* Inline Enhancement Section */}
+            <section className="bg-white rounded-xl shadow-lg p-6">
+              <h2 className="font-semibold text-gray-700 text-lg mb-3">
+                Make it even better
+              </h2>
+              <p className="text-sm text-gray-500 mb-4">
+                Add a bit more context to sharpen your prompt even further.
+              </p>
+
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="Who’s this for?"
+                  value={audience}
+                  onChange={(e) => setAudience(e.target.value)}
+                  className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 placeholder-gray-400"
+                />
+                <input
+                  type="text"
+                  placeholder="What result are you hoping for?"
+                  value={outcome}
+                  onChange={(e) => setOutcome(e.target.value)}
+                  className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 placeholder-gray-400"
+                />
+                <input
+                  type="text"
+                  placeholder="Anything else I should consider?"
+                  value={constraints}
+                  onChange={(e) => setConstraints(e.target.value)}
+                  className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 placeholder-gray-400"
+                />
+              </div>
+
+              <button
+                onClick={handleEnhance}
+                disabled={enhancing}
+                className="w-full mt-4 bg-blue-600 text-white font-medium py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                {enhancing ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        fill="none"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    <span>Enhancing...</span>
+                  </>
+                ) : (
+                  "🚀 Enhance Prompt"
+                )}
+              </button>
+            </section>
+
+            {enhanced && (
+              <section className="bg-blue-50 rounded-xl shadow-lg p-6">
+                <h2 className="font-semibold text-blue-700 text-sm uppercase mb-2">
+                  Enhanced Version
+                </h2>
+                <p className="p-4 bg-white border border-blue-200 rounded-lg text-gray-800 leading-relaxed font-medium">
+                  {enhanced.after}
+                </p>
+                <p className="text-sm text-gray-500 mt-2">{enhanced.why}</p>
+              </section>
+            )}
           </div>
         )}
 
         <div className="text-center mt-8 text-gray-500 text-sm">
-          <p>Powered by GPT-4 • Prompt magic by Stratagentic.ai 🇳🇴</p>
+          <p>Powered by GPT-4 • Promptodactyl 🇳🇴</p>
         </div>
       </div>
     </main>
