@@ -1,7 +1,7 @@
 // src/components/Globe.jsx
 import { useEffect, useRef, useState } from "react";
 
-export function Globe({ maxWidth = 512, maxHeight = 512 }) {
+export function Globe({ maxWidth = 700, maxHeight = 700 }) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: maxWidth, height: maxHeight });
