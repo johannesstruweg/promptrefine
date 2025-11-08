@@ -346,9 +346,21 @@ export default function App() {
       )}
 
       {/* Footer */}
-      <footer className="text-center mt-16 mb-8 text-gray-500 text-sm relative z-10">
-        <p>Powered by GPT-4 • © 2025 Promptodactyl by stratagentic.ai 🇳🇴</p>
-      </footer>
+     <footer className="text-center mt-16 mb-8 text-gray-500 text-sm relative z-10">
+  <p>
+    Powered by GPT-4 • © 2025 Promptodactyl by{" "}
+    <a
+      href="https://stratagentic.ai"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-blue-600 hover:text-blue-700 transition-colors"
+    >
+      Stratagentic
+    </a>{" "}
+    🇳🇴
+  </p>
+</footer>
+
     </main>
   );
 }
