@@ -114,7 +114,7 @@ export default function App() {
       </div>
 
       {/* Input Section */}
-      <div className="w-full max-w-3xl bg-white/70 backdrop-blur-sm rounded-xl border border-gray-200 shadow-sm p-6 relative z-10">
+      <div className="w-full max-w-3xl p-6 relative z-10">
         <textarea
           rows={8}
           className={`w-full p-4 border-2 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 ${
