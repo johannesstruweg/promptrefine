@@ -120,7 +120,7 @@ export default function App() {
           alt="Promptodactyl Logo"
           className="mx-auto mb-4 w-48 sm:w-56 md:w-64 h-auto transition-transform hover:scale-105"
         />
-        <p className="text-gray-600 text-lg">Clarity is power. Refine your prompt.</p>
+        <p className="text-gray-600 text-lg">Prompts that take flight.</p>
       </div>
 
       {/* Input Section */}
