@@ -6,6 +6,7 @@ export function Globe({ maxWidth = 700, maxHeight = 700 }) {
   const containerRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: maxWidth, height: maxHeight });
 
+  // Handle resize and responsive sizing
   useEffect(() => {
     const updateSize = () => {
       if (!containerRef.current) return;
@@ -18,6 +19,7 @@ export function Globe({ maxWidth = 700, maxHeight = 700 }) {
     return () => window.removeEventListener("resize", updateSize);
   }, [maxWidth, maxHeight]);
 
+  // Draw globe points (no mouse interaction)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -25,14 +27,12 @@ export function Globe({ maxWidth = 700, maxHeight = 700 }) {
     if (!ctx) return;
 
     const { width, height } = dimensions;
-    const POINTS = 1000;
+    const POINTS = 900;
     const RADIUS = Math.min(width, height) * 0.44;
     const COLOR = "#2563EB";
     const points = [];
-    let t = 0;
-    let rotX = 0, rotY = 0;
-    const baseRotY = 0.002;
 
+    // Generate points inside sphere
     for (let i = 0; i < POINTS; i++) {
       const theta = Math.acos(2 * Math.random() - 1);
       const phi = 2 * Math.PI * Math.random();
@@ -43,16 +43,23 @@ export function Globe({ maxWidth = 700, maxHeight = 700 }) {
       points.push({ x, y, z });
     }
 
+    let t = 0;
+    let rotY = 0;
+    const baseRotY = 0.002; // steady rotation speed
+
+    // Project 3D points into 2D
     const project = (p, rotY, rotX) => {
       const cosY = Math.cos(rotY);
       const sinY = Math.sin(rotY);
-      let x = p.x * cosY + p.z * sinY;
-      let z = p.z * cosY - p.x * sinY;
-      let y = p.y;
+      const x = p.x * cosY + p.z * sinY;
+      const z = p.z * cosY - p.x * sinY;
+      const y = p.y;
+
       const cosX = Math.cos(rotX);
       const sinX = Math.sin(rotX);
-      let y2 = y * cosX - z * sinX;
-      let z2 = z * cosX + y * sinX;
+      const y2 = y * cosX - z * sinX;
+      const z2 = z * cosX + y * sinX;
+
       const depth = 500;
       const scale = depth / (depth + z2);
       const px = width / 2 + x * scale;
@@ -60,16 +67,18 @@ export function Globe({ maxWidth = 700, maxHeight = 700 }) {
       return { px, py, scale, z: z2 };
     };
 
+    // Draw animation loop
     function draw() {
       ctx.clearRect(0, 0, width, height);
       rotY += baseRotY;
-      const pulse = Math.sin(t * 0.04) * 0.3 + 0.7;
+      const rotX = Math.sin(t * 0.002) * 0.2; // gentle oscillation
+      const pulse = Math.sin(t * 0.02) * 0.15 + 0.85;
 
       for (let i = 0; i < POINTS; i++) {
         const p = points[i];
         const pr = project(p, rotY, rotX);
-        const alpha = 0.25 + 0.75 * (1 - Math.sqrt(p.x * p.x + p.y * p.y + p.z * p.z) / RADIUS);
-        const size = 1.2 * pr.scale * pulse;
+        const alpha = 0.15 + 0.65 * (1 - Math.sqrt(p.x * p.x + p.y * p.y + p.z * p.z) / RADIUS);
+        const size = 1.1 * pr.scale * pulse;
         ctx.beginPath();
         ctx.fillStyle = COLOR;
         ctx.globalAlpha = alpha * pr.scale;
