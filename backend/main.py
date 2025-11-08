@@ -13,13 +13,14 @@ client = OpenAI()
 
 app = FastAPI()
 
-allowed_origins = [
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "https://promptodactyl.vercel.app",
-    "https://promptodactyl-git-main-johannes-projects-e398a402.vercel.app",
-    "https://promptodactyl-3neeiq0ck-johannes-projects-e398a402.vercel.app"
-]
+# Temporary: allow everything to confirm CORS setup works
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 if os.getenv("ALLOWED_ORIGINS"):
