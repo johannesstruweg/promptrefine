@@ -208,6 +208,3 @@ export default function App() {
   );
 }
 ```
-
----
-
