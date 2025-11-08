@@ -16,6 +16,8 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "https://promptodactyl.com",
+        "https://www.promptodactyl.com",
         "https://promptodactyl.vercel.app",
         "http://localhost:5173",
         "http://localhost:3000"
