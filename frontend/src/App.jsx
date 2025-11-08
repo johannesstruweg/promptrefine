@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import axios from "axios";
-import { globe } from "./components/globe"; // make sure this file exists in /src/components
+import { Globe } from "./components/globe"; // make sure this file exists in /src/components
 
 export default function App() {
   const [text, setText] = useState("");
@@ -104,10 +104,10 @@ export default function App() {
   return (
     <main className="relative min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-start overflow-hidden p-4 sm:p-6">
 
-      {/* 🌍 Fixed globe Background */}
+      {/* 🌍 Fixed Globe Background */}
       <div className="fixed top-[-120px] left-0 w-full flex justify-center pointer-events-none opacity-60 z-0">
         <div className="w-[480px] h-[480px] sm:w-[600px] sm:h-[600px]">
-          <globe maxWidth={600} maxHeight={600} />
+          <Globe maxWidth={600} maxHeight={600} />
         </div>
       </div>
 
