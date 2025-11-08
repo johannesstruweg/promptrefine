@@ -66,21 +66,41 @@ async def refine_prompt(data: Prompt):
         logger.info(f"Refining prompt of length: {len(data.text)}")
 
         system_prompt = """
-You are an expert prompt engineer and AI strategy consultant.
-Your job is to transform ordinary or vague user prompts into strategically structured, expert-level prompts that lead to deeper, more actionable LLM outputs.
+You are an expert prompt engineer specializing in transforming user inputs into high-quality, production-ready prompts optimized for large language models (LLMs).
+Your purpose is to create clear, specific, domain-intelligent prompts that reliably yield superior outputs.
 
-When refining a prompt:
-1. Define a relevant expert role (for example, “Act as a manufacturing efficiency analyst”) to frame the model’s perspective.
-2. Add clear objectives and constraints that guide the reasoning process.
-3. Structure the output format into explicit sections when appropriate (for example, Analysis, Recommendations, Risks, Implementation Steps).
-4. Require quantitative or comparative reasoning where it strengthens decision-making (for example, estimates, benchmarks, risk scores, timelines).
-5. Maintain the original intent but enhance clarity, precision, and analytical depth.
-6. Keep the result professional, concise, and immediately usable.
+PROCESS:
+1. Analyze Context: identify task type, domain, platform, and implicit requirements.
+   - If input <15 words or unclear, infer intent and state assumption.
+2. Generate Optimized Prompt: include role/persona, objective, structure, constraints, context/examples, and success criteria.
+   - For marketing: audience, tone, platform conventions, frameworks.
+   - For technical: stack, structure, error handling, performance.
+   - For business: audience level, CTA, compliance, and tone.
+3. Provide Optimization Analysis:
+   - Quantitative comparison: word/character counts.
+   - Qualitative improvements: list 3–5 concrete changes and their benefits.
+   - Reasoning summary: 1–2 sentences explaining why these changes improve results.
+4. Context Gathering (optional):
+   - Ask 2–3 concise questions only if necessary.
+   - If skipped, clearly state assumptions.
+5. Apply Optimization Principles:
+   - DO preserve intent, add clarity, specificity, and domain intelligence.
+   - DO anticipate model failure modes.
+   - DON’T over-engineer, contradict, or generalize improvements.
+6. Run Quality Checks:
+   - Clarity, Specificity, Completeness, Consistency, Practicality, and Formatting.
+   - Output must follow strict markdown structure defined below.
+7. Output Discipline:
+   - Return only valid JSON with keys: before, after, why.
+   - End with “[END OF OPTIMIZATION OUTPUT]”.
 
-Return only valid JSON with exactly these keys:
-- before: the original prompt
-- after: the improved prompt
-- why: a concise explanation (2–3 sentences) describing what structural and analytical improvements were applied.
+OUTPUT FORMAT:
+{
+  "before": "original user prompt",
+  "after": "optimized, production-ready prompt with role, objective, and structure",
+  "why": "brief explanation of what was improved and why it enhances LLM reliability"
+}
+[END OF OPTIMIZATION OUTPUT]
 """
 
         # Context-aware hinting
@@ -88,21 +108,21 @@ Return only valid JSON with exactly these keys:
         if "marketing" in lower_text:
             context_hint = (
                 "This prompt appears related to marketing or communication. "
-                "Emphasize audience clarity, tone, and measurable outcomes."
+                "Emphasize target audience, tone, structure, and measurable outcomes."
             )
         elif "manufacturing" in lower_text:
             context_hint = (
                 "This prompt appears related to manufacturing or process optimization. "
-                "Emphasize quantitative evaluation, efficiency metrics, and implementation steps."
+                "Emphasize efficiency metrics, quantitative reasoning, and implementation steps."
             )
         elif "strategy" in lower_text or "business" in lower_text:
             context_hint = (
-                "This prompt appears related to business or strategic decision-making. "
-                "Focus on data-driven recommendations, competitive analysis, and actionable next steps."
+                "This prompt appears related to business or strategy. "
+                "Focus on actionable insights, data-driven logic, and decision clarity."
             )
         else:
             context_hint = (
-                "General improvement: clarify the purpose, structure the response, and strengthen analytical guidance."
+                "General improvement: clarify purpose, define a clear role, and strengthen structure."
             )
 
         user_prompt = f"""
@@ -112,9 +132,8 @@ Refine and enhance the following prompt according to your system instructions:
 
 {data.text}
 
-Focus on improving depth, structure, and analytical guidance.
-Ensure the rewritten prompt defines a role, objective, and structured output format.
-Return valid JSON only.
+Focus on clarity, structure, and depth. Ensure the rewritten prompt defines a role, objective, and output structure.
+Return only valid JSON in the defined format.
 """
 
         response = client.chat.completions.create(
