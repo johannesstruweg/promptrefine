@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import axios from "axios";
-import { Globe } from "./components/globe"; // make sure this file exists in /src/components
+import { Globe } from "./components/Globe"; // make sure this file exists in /src/components
 
 export default function App() {
   const [text, setText] = useState("");
