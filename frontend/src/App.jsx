@@ -9,6 +9,7 @@ export default function App() {
   const [enhancing, setEnhancing] = useState(false);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [copiedEnhanced, setCopiedEnhanced] = useState(false);
 
   const [audience, setAudience] = useState("");
   const [outcome, setOutcome] = useState("");
@@ -17,10 +18,8 @@ export default function App() {
   const resultRef = useRef(null);
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-  // --- Handle first refinement ---
   const handleRefine = async () => {
     const trimmed = text.trim();
-
     if (trimmed.length < 10) {
       setError("Please enter at least 10 characters");
       return;
@@ -35,6 +34,7 @@ export default function App() {
     setEnhanced(null);
     setError(null);
     setCopied(false);
+    setCopiedEnhanced(false);
 
     try {
       const response = await axios.post(`${API_URL}/refine`, { text: trimmed });
@@ -52,7 +52,6 @@ export default function App() {
     }
   };
 
-  // --- Handle second-stage enhancement ---
   const handleEnhance = async () => {
     if (!res?.after) return;
     setEnhancing(true);
@@ -78,7 +77,6 @@ export default function App() {
     }
   };
 
-  // --- Copy output (tap-to-copy) ---
   const handleCopy = async () => {
     if (!res?.after) return;
     try {
@@ -90,13 +88,23 @@ export default function App() {
     }
   };
 
-const handleKeyDown = (e) => {
-  // If Enter is pressed without Shift, submit the prompt
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();   // stop newline from being added
-    handleRefine();       // run the refinement
-  }
-};
+  const handleCopyEnhanced = async () => {
+    if (!enhanced?.after) return;
+    try {
+      await navigator.clipboard.writeText(enhanced.after);
+      setCopiedEnhanced(true);
+      setTimeout(() => setCopiedEnhanced(false), 1500);
+    } catch (err) {
+      console.error("Copy failed:", err);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleRefine();
+    }
+  };
 
   const charCount = text.length;
   const isValid = charCount >= 10 && charCount <= 2000;
@@ -104,7 +112,6 @@ const handleKeyDown = (e) => {
   return (
     <main className="relative min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-start overflow-hidden p-4 sm:p-6">
 
-    
       {/* Header */}
       <div className="text-center mb-8 relative z-10">
         <img
@@ -116,53 +123,92 @@ const handleKeyDown = (e) => {
       </div>
 
       {/* Input Section */}
-     {/* Input Section */}
-<section className="w-full max-w-3xl relative z-10">
-  <textarea
-    rows={8}
-    className={`w-full p-4 border-2 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 ${
-      error ? "border-red-300" : "border-gray-200"
-    }`}
-    placeholder="Paste your prompt here..."
-    value={text}
-    onChange={(e) => {
-      setText(e.target.value);
-      setError(null);
-    }}
-    onKeyDown={handleKeyDown}
-    disabled={loading}
-    aria-label="Prompt input"
-    aria-describedby="char-count"
-  />
-  <div
-    id="char-count"
-    className={`text-sm mt-2 flex justify-between ${
-      !isValid && charCount > 0 ? "text-red-500" : "text-gray-500"
-    }`}
-  >
-    <span>{charCount} / 2000 characters</span>
-    <button
-      onClick={handleRefine}
-      disabled={loading || !isValid}
-      className="text-sm bg-blue-600 text-white rounded-full px-5 py-1.5 hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-    >
-      {loading ? "Refining..." : "Refine"}
-    </button>
-  </div>
+      <section className="w-full max-w-3xl relative z-10">
+        <div className="relative">
+          <span className="absolute top-4 left-4 text-gray-400 text-xl select-none">+</span>
+          <textarea
+            rows={8}
+            className={`w-full pl-10 p-4 border-2 rounded-none resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 ${
+              error ? "border-red-300" : "border-gray-200"
+            }`}
+            placeholder="Prompt anything"
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+              setError(null);
+            }}
+            onKeyDown={handleKeyDown}
+            disabled={loading}
+            aria-label="Prompt input"
+            aria-describedby="char-count"
+          />
+          <button
+            onClick={handleRefine}
+            disabled={loading || !isValid}
+            className="absolute bottom-3 right-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-10 h-10 flex items-center justify-center transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+            aria-label="Run refine"
+          >
+            {loading ? (
+              <svg
+                className="animate-spin h-5 w-5 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                ></path>
+              </svg>
+            ) : (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="2"
+                stroke="currentColor"
+                className="w-5 h-5"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M5 12h14m0 0l-6-6m6 6l-6 6"
+                />
+              </svg>
+            )}
+          </button>
+        </div>
 
-  {error && (
-    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-      {error}
-    </div>
-  )}
-</section>
+        <div
+          id="char-count"
+          className={`text-sm mt-2 text-right ${
+            !isValid && charCount > 0 ? "text-red-500" : "text-gray-500"
+          }`}
+        >
+          {charCount} / 2000 characters
+        </div>
 
+        {error && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {error}
+          </div>
+        )}
+      </section>
 
       {/* Output */}
       {res && (
         <div ref={resultRef} className="mt-12 w-full max-w-3xl mx-auto relative z-10 space-y-10">
 
-          {/* NEW (was After) */}
+          {/* NEW */}
           <section>
             <h2
               className="text-sm font-semibold text-blue-600 uppercase mb-2 cursor-pointer select-none hover:underline"
@@ -176,12 +222,10 @@ const handleKeyDown = (e) => {
             >
               {res.after}
             </p>
-            {copied && (
-              <span className="text-xs text-green-600">(Copied!)</span>
-            )}
+            {copied && <span className="text-xs text-green-600">(Copied!)</span>}
           </section>
 
-          {/* Original (was Before) */}
+          {/* Original */}
           <section>
             <h2 className="text-sm font-semibold text-gray-600 uppercase mb-2">
               Original
@@ -198,38 +242,84 @@ const handleKeyDown = (e) => {
           </section>
 
           {/* Enhance */}
-          <section className="space-y-3">
+          <section className="space-y-4">
             <h2 className="text-sm font-semibold text-gray-600 uppercase mb-2">
               Enhance
             </h2>
-            <input
-              type="text"
-              placeholder="Who’s this for?"
-              value={audience}
-              onChange={(e) => setAudience(e.target.value)}
-              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-            />
-            <input
-              type="text"
-              placeholder="What result are you hoping for?"
-              value={outcome}
-              onChange={(e) => setOutcome(e.target.value)}
-              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-            />
-            <input
-              type="text"
-              placeholder="Anything else to consider?"
-              value={constraints}
-              onChange={(e) => setConstraints(e.target.value)}
-              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-            />
-            <div className="text-right">
+
+            <div className="relative">
+              <span className="absolute left-4 top-2.5 text-gray-400 text-lg select-none">+</span>
+              <input
+                type="text"
+                placeholder="Who’s this for?"
+                value={audience}
+                onChange={(e) => setAudience(e.target.value)}
+                className="w-full p-2.5 pl-10 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+            </div>
+
+            <div className="relative">
+              <span className="absolute left-4 top-2.5 text-gray-400 text-lg select-none">+</span>
+              <input
+                type="text"
+                placeholder="What result are you hoping for?"
+                value={outcome}
+                onChange={(e) => setOutcome(e.target.value)}
+                className="w-full p-2.5 pl-10 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+            </div>
+
+            <div className="relative">
+              <span className="absolute left-4 top-2.5 text-gray-400 text-lg select-none">+</span>
+              <input
+                type="text"
+                placeholder="Anything else to consider?"
+                value={constraints}
+                onChange={(e) => setConstraints(e.target.value)}
+                className="w-full p-2.5 pl-10 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+            </div>
+
+            <div className="flex justify-end mt-2">
               <button
                 onClick={handleEnhance}
                 disabled={enhancing}
-                className="text-sm bg-blue-600 text-white rounded-full px-5 py-1.5 hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-full w-10 h-10 flex items-center justify-center transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                aria-label="Run enhance"
               >
-                {enhancing ? "Enhancing..." : "Enhance"}
+                {enhancing ? (
+                  <svg
+                    className="animate-spin h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    ></path>
+                  </svg>
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth="2"
+                    stroke="currentColor"
+                    className="w-5 h-5"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14m0 0l-6-6m6 6l-6 6" />
+                  </svg>
+                )}
               </button>
             </div>
           </section>
@@ -237,13 +327,19 @@ const handleKeyDown = (e) => {
           {/* Enhanced Version */}
           {enhanced && (
             <section>
-              <h2 className="text-sm font-semibold text-blue-700 uppercase mb-2">
-                Enhanced Version
+              <h2
+                className="text-sm font-semibold text-blue-700 uppercase mb-2 cursor-pointer select-none hover:underline"
+                onClick={handleCopyEnhanced}
+              >
+                Enhanced Version – click/tap to copy
               </h2>
-              <p className="text-gray-800 leading-relaxed font-medium">
+              <p
+                className="text-gray-800 leading-relaxed font-medium cursor-pointer select-text"
+                onClick={handleCopyEnhanced}
+              >
                 {enhanced.after}
               </p>
-              <p className="text-sm text-gray-500 mt-2">{enhanced.why}</p>
+              {copiedEnhanced && <span className="text-xs text-green-600">(Copied!)</span>}
             </section>
           )}
         </div>
