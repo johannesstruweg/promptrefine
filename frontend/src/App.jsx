@@ -201,7 +201,7 @@ export default function App() {
         )}
 
         <div className="text-center mt-8 text-gray-500 text-sm">
-          <p>Powered by GPT-4 • Prompt magic by Stratagentic.ai</p>
+          <p>Powered by GPT-4 • Prompt magic by Stratagentic.ai 🇳🇴</p>
         </div>
       </div>
     </main>
