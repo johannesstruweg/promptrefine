@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 
 export default function App() {
@@ -15,10 +15,46 @@ export default function App() {
   const [audience, setAudience] = useState("");
   const [outcome, setOutcome] = useState("");
   const [constraints, setConstraints] = useState("");
+  const [placeholders, setPlaceholders] = useState([
+    "Who’s this for?",
+    "What result are you hoping for?",
+    "Anything else to consider?",
+  ]);
 
   const resultRef = useRef(null);
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
+  // --- Contextual placeholder logic ---
+  const getEnhancePlaceholders = (input) => {
+    const lower = input.toLowerCase();
+    if (lower.includes("code") || lower.includes("api") || lower.includes("function"))
+      return [
+        "What language or framework?",
+        "Target behavior or output?",
+        "Performance or readability priority?",
+      ];
+    if (lower.includes("business") || lower.includes("strategy") || lower.includes("market"))
+      return [
+        "Target market or audience?",
+        "Desired outcome or insight?",
+        "Constraints (budget, time, etc.)?",
+      ];
+    if (lower.includes("write") || lower.includes("story") || lower.includes("blog") || lower.includes("email"))
+      return ["Who’s your reader?", "Tone or mood?", "Any key themes or constraints?"];
+    if (lower.includes("design") || lower.includes("visual") || lower.includes("style"))
+      return ["Feeling or aesthetic?", "Medium or platform?", "Brand or visual guidelines?"];
+    if (lower.includes("learn") || lower.includes("teach") || lower.includes("explain"))
+      return ["Who’s learning?", "Goal or difficulty level?", "Depth or examples needed?"];
+    if (lower.includes("marketing") || lower.includes("ad") || lower.includes("sales"))
+      return ["Target audience?", "Desired action or conversion?", "Tone or brand voice?"];
+    return ["Who’s this for?", "What result are you hoping for?", "Anything else to consider?"];
+  };
+
+  useEffect(() => {
+    setPlaceholders(getEnhancePlaceholders(text));
+  }, [text]);
+
+  // --- Refinement ---
   const handleRefine = async () => {
     const trimmed = text.trim();
     if (trimmed.length < 10) {
@@ -53,6 +89,7 @@ export default function App() {
     }
   };
 
+  // --- Enhancement ---
   const handleEnhance = async () => {
     if (!res?.after) return;
     setEnhancing(true);
@@ -78,6 +115,7 @@ export default function App() {
     }
   };
 
+  // --- Copy handlers ---
   const handleCopy = async () => {
     if (!res?.after) return;
     try {
@@ -100,6 +138,7 @@ export default function App() {
     }
   };
 
+  // --- Key press behavior ---
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -110,9 +149,9 @@ export default function App() {
   const charCount = text.length;
   const isValid = charCount >= 10 && charCount <= 2000;
 
+  // --- UI ---
   return (
     <main className="relative min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-start overflow-hidden p-4 sm:p-6">
-
       {/* Header */}
       <div className="text-center mb-8 relative z-10">
         <img
@@ -150,77 +189,34 @@ export default function App() {
             aria-label="Run refine"
           >
             {loading ? (
-              <svg
-                className="animate-spin h-5 w-5 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                ></path>
+              <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
               </svg>
             ) : (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth="2"
-                stroke="currentColor"
-                className="w-5 h-5"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5 12h14m0 0l-6-6m6 6l-6 6"
-                />
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14m0 0l-6-6m6 6l-6 6" />
               </svg>
             )}
           </button>
         </div>
 
-        <div
-          id="char-count"
-          className={`text-sm mt-2 text-right ${
-            !isValid && charCount > 0 ? "text-red-500" : "text-gray-500"
-          }`}
-        >
+        <div id="char-count" className={`text-sm mt-2 text-right ${!isValid && charCount > 0 ? "text-red-500" : "text-gray-500"}`}>
           {charCount} / 2000 characters
         </div>
 
-        {error && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {error}
-          </div>
-        )}
+        {error && <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>}
       </section>
 
       {/* Output */}
       {res && (
         <div ref={resultRef} className="mt-12 w-full max-w-3xl mx-auto relative z-10 space-y-10">
-
           {/* NEW */}
           <section>
-            <h2
-              className="text-sm font-semibold text-blue-600 uppercase mb-2 cursor-pointer select-none hover:underline"
-              onClick={handleCopy}
-            >
+            <h2 className="text-sm font-semibold text-blue-600 uppercase mb-2 cursor-pointer select-none hover:underline" onClick={handleCopy}>
               NEW – click/tap to copy
             </h2>
-            <p
-              className="text-gray-800 leading-relaxed font-medium cursor-pointer select-text"
-              onClick={handleCopy}
-            >
+            <p className="text-gray-800 leading-relaxed font-medium cursor-pointer select-text" onClick={handleCopy}>
               {res.after}
             </p>
             {copied && <span className="text-xs text-green-600">(Copied!)</span>}
@@ -228,58 +224,36 @@ export default function App() {
 
           {/* Original */}
           <section>
-            <h2 className="text-sm font-semibold text-gray-600 uppercase mb-2">
-              Original
-            </h2>
+            <h2 className="text-sm font-semibold text-gray-600 uppercase mb-2">Original</h2>
             <p className="text-gray-700 leading-relaxed">{res.before}</p>
           </section>
 
           {/* Why it's better */}
           <section>
-            <h2 className="text-sm font-semibold text-gray-600 uppercase mb-2">
-              Why it's better
-            </h2>
+            <h2 className="text-sm font-semibold text-gray-600 uppercase mb-2">Why it's better</h2>
             <p className="text-gray-700 leading-relaxed">{res.why}</p>
           </section>
 
           {/* Enhance */}
           <section className="space-y-4">
-            <h2 className="text-sm font-semibold text-gray-600 uppercase mb-2">
-              Enhance
-            </h2>
+            <h2 className="text-sm font-semibold text-gray-600 uppercase mb-2">Enhance</h2>
 
-            <div className="relative">
-              <span className="absolute left-4 top-2.5 text-gray-400 text-lg select-none">+</span>
-              <input
-                type="text"
-                placeholder="Who’s this for?"
-                value={audience}
-                onChange={(e) => setAudience(e.target.value)}
-                className="w-full p-2.5 pl-10 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 text-sm"
-              />
-            </div>
-
-            <div className="relative">
-              <span className="absolute left-4 top-2.5 text-gray-400 text-lg select-none">+</span>
-              <input
-                type="text"
-                placeholder="What result are you hoping for?"
-                value={outcome}
-                onChange={(e) => setOutcome(e.target.value)}
-                className="w-full p-2.5 pl-10 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 text-sm"
-              />
-            </div>
-
-            <div className="relative">
-              <span className="absolute left-4 top-2.5 text-gray-400 text-lg select-none">+</span>
-              <input
-                type="text"
-                placeholder="Anything else to consider?"
-                value={constraints}
-                onChange={(e) => setConstraints(e.target.value)}
-                className="w-full p-2.5 pl-10 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 text-sm"
-              />
-            </div>
+            {[
+              [audience, setAudience, placeholders[0]],
+              [outcome, setOutcome, placeholders[1]],
+              [constraints, setConstraints, placeholders[2]],
+            ].map(([val, setVal, placeholder], i) => (
+              <div className="relative" key={i}>
+                <span className="absolute left-4 top-2.5 text-gray-400 text-lg select-none">+</span>
+                <input
+                  type="text"
+                  placeholder={placeholder}
+                  value={val}
+                  onChange={(e) => setVal(e.target.value)}
+                  className="w-full p-2.5 pl-10 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+              </div>
+            ))}
 
             <div className="flex justify-end mt-2">
               <button
@@ -289,35 +263,12 @@ export default function App() {
                 aria-label="Run enhance"
               >
                 {enhancing ? (
-                  <svg
-                    className="animate-spin h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    ></path>
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                   </svg>
                 ) : (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth="2"
-                    stroke="currentColor"
-                    className="w-5 h-5"
-                  >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-5 h-5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14m0 0l-6-6m6 6l-6 6" />
                   </svg>
                 )}
@@ -328,16 +279,10 @@ export default function App() {
           {/* Enhanced Version */}
           {enhanced && (
             <section>
-              <h2
-                className="text-sm font-semibold text-blue-700 uppercase mb-2 cursor-pointer select-none hover:underline"
-                onClick={handleCopyEnhanced}
-              >
+              <h2 className="text-sm font-semibold text-blue-700 uppercase mb-2 cursor-pointer select-none hover:underline" onClick={handleCopyEnhanced}>
                 Enhanced Version – click/tap to copy
               </h2>
-              <p
-                className="text-gray-800 leading-relaxed font-medium cursor-pointer select-text"
-                onClick={handleCopyEnhanced}
-              >
+              <p className="text-gray-800 leading-relaxed font-medium cursor-pointer select-text" onClick={handleCopyEnhanced}>
                 {enhanced.after}
               </p>
               {copiedEnhanced && <span className="text-xs text-green-600">(Copied!)</span>}
@@ -346,37 +291,24 @@ export default function App() {
         </div>
       )}
 
-      {/* Footer */}
+      {/* Footer & Privacy Policy */}
       <footer className="text-center mt-16 mb-4 text-gray-500 text-sm relative z-10">
         <p>
-          Powered by ChatGPT • © 2025 Promptodactyl by{" "}
-          <a
-            href="https://stratagentic.ai"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:text-blue-700 transition-colors"
-          >
+          Powered by GPT-5 • © 2025 Promptodactyl by{" "}
+          <a href="https://stratagentic.ai" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 transition-colors">
             stratagentic.ai
           </a>{" "}
           🇳🇴
         </p>
-        <button
-          onClick={() => setShowPolicy(true)}
-          className="mt-2 text-gray-400 "
-        >
+        <button onClick={() => setShowPolicy(true)} className="mt-2 text-gray-400">
           Privacy Policy
         </button>
       </footer>
 
-      {/* Privacy Policy Popup */}
       {showPolicy && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
           <div className="bg-white text-gray-800 rounded-lg shadow-lg w-full max-w-2xl p-6 relative overflow-y-auto max-h-[80vh]">
-            <button
-              onClick={() => setShowPolicy(false)}
-              className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-xl font-semibold"
-              aria-label="Close Privacy Policy"
-            >
+            <button onClick={() => setShowPolicy(false)} className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-xl font-semibold" aria-label="Close Privacy Policy">
               ×
             </button>
             <h2 className="text-lg font-semibold mb-3">Privacy Policy</h2>
@@ -409,6 +341,6 @@ export default function App() {
           </div>
         </div>
       )}
-    </main>  
+    </main>
   );
 }
