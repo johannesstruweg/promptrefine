@@ -13,24 +13,19 @@ client = OpenAI()
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "https://promptodactyl.com",
-        "https://www.promptodactyl.com",
-        "https://promptodactyl.vercel.app",
-        "http://localhost:5173",
-        "http://localhost:3000"
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
+# Define allowed origins BEFORE adding the middleware
+allowed_origins = [
+    "https://promptodactyl.com",
+    "https://www.promptodactyl.com",
+    "https://promptodactyl.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000"
+]
 
 if os.getenv("ALLOWED_ORIGINS"):
     allowed_origins.extend(os.getenv("ALLOWED_ORIGINS").split(","))
 
+# Add CORS middleware AFTER defining allowed_origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
@@ -38,6 +33,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 class Prompt(BaseModel):
     text: str
