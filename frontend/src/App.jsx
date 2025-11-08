@@ -114,45 +114,47 @@ export default function App() {
       </div>
 
       {/* Input Section */}
-      <div className="w-full max-w-3xl p-6 relative z-10">
-        <textarea
-          rows={8}
-          className={`w-full p-4 border-2 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 ${
-            error ? "border-red-300" : "border-gray-200"
-          }`}
-          placeholder="Type/Paste your prompt here..."
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            setError(null);
-          }}
-          onKeyDown={handleKeyDown}
-          disabled={loading}
-          aria-label="Prompt input"
-          aria-describedby="char-count"
-        />
-        <div
-          id="char-count"
-          className={`text-sm mt-2 flex justify-between ${
-            !isValid && charCount > 0 ? "text-red-500" : "text-gray-500"
-          }`}
-        >
-          <span>{charCount} / 2000 characters</span>
-          <button
-            onClick={handleRefine}
-            disabled={loading || !isValid}
-            className="text-sm bg-blue-600 text-white rounded-full px-5 py-1.5 hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-          >
-            {loading ? "Refining..." : "Refine"}
-          </button>
-        </div>
+     {/* Input Section */}
+<section className="w-full max-w-3xl relative z-10">
+  <textarea
+    rows={8}
+    className={`w-full p-4 border-2 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 ${
+      error ? "border-red-300" : "border-gray-200"
+    }`}
+    placeholder="Paste your prompt here..."
+    value={text}
+    onChange={(e) => {
+      setText(e.target.value);
+      setError(null);
+    }}
+    onKeyDown={handleKeyDown}
+    disabled={loading}
+    aria-label="Prompt input"
+    aria-describedby="char-count"
+  />
+  <div
+    id="char-count"
+    className={`text-sm mt-2 flex justify-between ${
+      !isValid && charCount > 0 ? "text-red-500" : "text-gray-500"
+    }`}
+  >
+    <span>{charCount} / 2000 characters</span>
+    <button
+      onClick={handleRefine}
+      disabled={loading || !isValid}
+      className="text-sm bg-blue-600 text-white rounded-full px-5 py-1.5 hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+    >
+      {loading ? "Refining..." : "Refine"}
+    </button>
+  </div>
 
-        {error && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {error}
-          </div>
-        )}
-      </div>
+  {error && (
+    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+      {error}
+    </div>
+  )}
+</section>
+
 
       {/* Output */}
       {res && (
