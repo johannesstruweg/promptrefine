@@ -65,6 +65,7 @@ async def refine_prompt(data: Prompt):
     try:
         logger.info(f"Refining prompt of length: {len(data.text)}")
 
+        # --- Advanced Prompt Optimizer System Instructions ---
         system_prompt = """
 You are an expert prompt engineer specializing in transforming user inputs into high-quality, production-ready prompts optimized for large language models (LLMs).
 Your purpose is to create clear, specific, domain-intelligent prompts that reliably yield superior outputs.
@@ -103,7 +104,7 @@ OUTPUT FORMAT:
 [END OF OPTIMIZATION OUTPUT]
 """
 
-        # Context-aware hinting
+        # --- Context-aware hinting ---
         lower_text = data.text.lower()
         if "marketing" in lower_text:
             context_hint = (
@@ -136,6 +137,7 @@ Focus on clarity, structure, and depth. Ensure the rewritten prompt defines a ro
 Return only valid JSON in the defined format.
 """
 
+        # --- OpenAI Call ---
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             temperature=0.4,
@@ -146,14 +148,44 @@ Return only valid JSON in the defined format.
             ],
         )
 
+        # --- Process Response ---
         content = response.choices[0].message.content
         result = json.loads(content)
 
         if not all(k in result for k in ["before", "after", "why"]):
             raise ValueError("Invalid response structure from AI")
 
+        # --- Add formatted versions (Markdown + HTML) ---
+        formatted_markdown = f"""
+### Original Prompt
+
+### Why It’s Better
+{result["why"]}
+""".strip()
+
+        formatted_html = f"""
+<div style='font-family:monospace;background:#0b0d10;color:#eaeaea;padding:20px;border-radius:10px;'>
+  <h3 style='color:#5da8ff;'>Original Prompt</h3>
+  <pre style='white-space:pre-wrap;background:#121417;padding:10px;border-radius:6px;'>{result["before"]}</pre>
+
+  <h3 style='color:#5da8ff;'>Optimized Prompt</h3>
+  <pre style='white-space:pre-wrap;background:#121417;padding:10px;border-radius:6px;'>{result["after"]}</pre>
+
+  <h3 style='color:#5da8ff;'>Why It’s Better</h3>
+  <p style='color:#bfc5ce;font-size:0.95rem;line-height:1.5;'>{result["why"]}</p>
+</div>
+""".strip()
+
+        final_response = {
+            "before": result["before"],
+            "after": result["after"],
+            "why": result["why"],
+            "markdown": formatted_markdown,
+            "html": formatted_html,
+        }
+
         logger.info("Refinement successful")
-        return result
+        return final_response
 
     except json.JSONDecodeError as e:
         logger.error(f"JSON decode error: {e}")
