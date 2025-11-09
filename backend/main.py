@@ -44,6 +44,7 @@ app.add_middleware(
 # --- Startup Event ---
 @app.on_event("startup")
 async def startup_event():
+    """Validate required environment variables on startup"""
     if not os.getenv("OPENAI_API_KEY"):
         logger.warning("OPENAI_API_KEY not found in environment variables")
     logger.info(f"Using model: {MODEL_NAME}")
@@ -52,6 +53,7 @@ async def startup_event():
 
 # --- Utility ---
 def safe_text(value):
+    """Convert various types to safe text strings"""
     if isinstance(value, dict):
         return json.dumps(value, ensure_ascii=False)
     if isinstance(value, list):
@@ -59,37 +61,9 @@ def safe_text(value):
     return str(value)
 
 
-def ensure_str(value):
-    """Guarantee a string output even if model returns dict or list"""
-    if isinstance(value, str):
-        return value.strip()
-    try:
-        return json.dumps(value, ensure_ascii=False)
-    except Exception:
-        return str(value)
-
-
-def format_json_readable(value):
-    """Detect JSON-like content and format it into a human-readable Markdown code block."""
-    try:
-        if isinstance(value, (dict, list)):
-            obj = value
-        else:
-            obj = json.loads(value)
-        pretty = json.dumps(obj, indent=2, ensure_ascii=False)
-        return {
-            "raw": obj,
-            "pretty": f"```json\n{pretty}\n```"
-        }
-    except Exception:
-        return {
-            "raw": value,
-            "pretty": value
-        }
-
-
 # --- Data Models ---
 class Prompt(BaseModel):
+    """Request model for prompt refinement"""
     text: str
 
     @validator("text")
@@ -103,12 +77,11 @@ class Prompt(BaseModel):
 
 
 class EnhanceRequest(BaseModel):
+    """Request model for prompt enhancement"""
     refined: str
     outcome: str = ""
     audience: str = ""
     constraints: str = ""
-    category: str = ""
-    hint: str = ""
 
     @validator("refined")
     def validate_refined(cls, v):
@@ -118,81 +91,73 @@ class EnhanceRequest(BaseModel):
         return v
 
 
-# --- Category Hint Helper ---
-def get_category_hint(text: str, category: str = "") -> str:
-    t = text.lower()
-    if category == "marketing" or any(k in t for k in ["marketing", "campaign", "ad", "sales"]):
-        return "Marketing context. Focus on persuasion, tone, and measurable outcomes."
-    if category == "business" or any(k in t for k in ["strategy", "plan", "analysis", "business"]):
-        return "Strategic or business context. Emphasize clarity, structure, and actionable reasoning."
-    if category == "code" or any(k in t for k in ["code", "api", "function", "script"]):
-        return "Technical context. Ensure precision, input/output clarity, and concise logic."
-    if category == "design" or any(k in t for k in ["design", "visual", "style", "aesthetic"]):
-        return "Design context. Highlight creative direction, clarity, and intent."
-    if category == "education" or any(k in t for k in ["teach", "lesson", "students", "learn"]):
-        return "Educational context. Emphasize clarity, structure, and learning outcomes."
-    if category == "presentation" or any(k in t for k in ["presentation", "slides", "deck"]):
-        return "Presentation context. Focus on logical flow, engagement, and visual pacing."
-    return "General context. Prioritize clarity, relevance, and structural balance."
-
-
 # --- Root Routes ---
 @app.get("/")
 async def root():
-    return {"service": "Promptodactyl API", "status": "running", "version": "1.3.2"}
+    """API root endpoint with service information"""
+    return {"service": "Promptodactyl API", "status": "running", "version": "1.1.0"}
 
 
 @app.get("/health")
 async def health_check():
+    """Health check endpoint"""
     return {"status": "healthy"}
 
 
 # --- Core Refinement Endpoint ---
 @app.post("/refine")
 async def refine_prompt(data: Prompt):
+    """
+    Refine a user prompt into a high-quality, production-ready prompt.
+    
+    Args:
+        data: Prompt object containing the text to refine
+        
+    Returns:
+        Dict with before, after, why, and category fields
+    """
     try:
-        logger.info(f"Refining prompt: {data.text[:60]}...")
+        logger.info(f"Refining prompt of length: {len(data.text)}")
 
         system_prompt = """
-You are **Promptodactyl**, an expert Prompt Engineer and Communication Designer.
-Your job is to take any rough or unclear input and refine it into a polished, structured, and ready-to-run prompt.
-Return only JSON with keys: before, after, why.
+You are an expert prompt engineer specializing in transforming user inputs into high-quality, production-ready prompts optimized for large language models (LLMs).
+Return valid JSON only with: before, after, why.
 """
 
-        # --- Detect category ---
-        txt = data.text.lower()
-        if "marketing" in txt:
+        lower_text = data.text.lower()
+        if "marketing" in lower_text:
             category = "marketing"
-        elif "strategy" in txt or "business" in txt:
+            context_hint = "Marketing or communication prompt. Focus on tone, conversion, and measurable outcomes."
+        elif "strategy" in lower_text or "business" in lower_text:
             category = "business"
-        elif "code" in txt or "api" in txt:
+            context_hint = "Business or strategy prompt. Focus on clarity, structure, and actionable insights."
+        elif "code" in lower_text or "api" in lower_text or "function" in lower_text:
             category = "code"
-        elif "design" in txt or "visual" in txt:
+            context_hint = "Technical prompt. Focus on precision, language, and implementation clarity."
+        elif "design" in lower_text or "visual" in lower_text:
             category = "design"
-        elif "teach" in txt or "learn" in txt:
+            context_hint = "Design or creative prompt. Focus on aesthetic direction and stylistic clarity."
+        elif "teach" in lower_text or "learn" in lower_text:
             category = "education"
-        elif "presentation" in txt or "slides" in txt or "deck" in txt:
-            category = "presentation"
+            context_hint = "Educational prompt. Focus on clarity, examples, and depth."
         else:
             category = "general"
-
-        category_hint = get_category_hint(data.text, category)
+            context_hint = "General prompt. Focus on purpose, structure, and readability."
 
         user_prompt = f"""
-Category: {category.upper()}
-Hint: {category_hint}
+{context_hint}
 
-User input:
+Refine and enhance the following prompt:
+
 {data.text}
 
-Refine this prompt for clarity, tone, and structure.
+Be concise, clear, and structured.
 Return valid JSON with 'before', 'after', and 'why'.
 """
 
-        # --- Call OpenAI ---
         response = client.chat.completions.create(
             model=MODEL_NAME,
-            temperature=0.45,
+            temperature=0.4,
             timeout=API_TIMEOUT,
             response_format={"type": "json_object"},
             messages=[
@@ -201,67 +166,80 @@ Return valid JSON with 'before', 'after', and 'why'.
             ],
         )
 
-        content = response.choices[0].message.content or ""
-        logger.info(f"Raw model response: {content[:120]}...")
+        # Log token usage for cost monitoring
+        if hasattr(response, 'usage') and response.usage:
+            logger.info(f"Token usage - Prompt: {response.usage.prompt_tokens}, "
+                       f"Completion: {response.usage.completion_tokens}, "
+                       f"Total: {response.usage.total_tokens}")
 
-        try:
-            result = json.loads(content)
-        except Exception:
-            result = {"before": data.text, "after": content, "why": "Model output not valid JSON."}
+        content = response.choices[0].message.content
+        result = json.loads(content)
 
-        # --- Normalize and format ---
-        for k in ["before", "after", "why"]:
-            result[k] = ensure_str(result.get(k, ""))
+        # Validate response structure
+        required_keys = ["before", "after", "why"]
+        if not all(k in result for k in required_keys):
+            logger.error(f"Missing required keys in AI response. Got: {result.keys()}")
+            raise ValueError("Invalid response structure from AI")
 
-        formatted_after = format_json_readable(result["after"])
+        # Validate response content
+        for key in required_keys:
+            if not isinstance(result[key], str) or not result[key].strip():
+                logger.error(f"Invalid {key} field in AI response")
+                raise ValueError(f"Invalid {key} field in response")
 
         return {
-            "before": safe_text(result["before"]),
-            "after_raw": formatted_after["raw"],
-            "after_pretty": formatted_after["pretty"],
-            "why": safe_text(result["why"]),
+            "before": safe_text(result["before"]).strip(),
+            "after": safe_text(result["after"]).strip(),
+            "why": safe_text(result["why"]).strip(),
             "category": category,
-            "hint": category_hint,
         }
 
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to parse AI response")
+    except ValueError as e:
+        logger.error(f"Validation error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Invalid AI response format")
     except Exception as e:
-        logger.error(f"Refine error: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Refinement failed")
-
+        logger.error(f"Refinement error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An error occurred during refinement")
 
 
 # --- Enhancement Endpoint ---
 @app.post("/enhance")
 async def enhance_prompt(data: EnhanceRequest):
+    """
+    Enhance a refined prompt with additional context.
+    
+    Args:
+        data: EnhanceRequest object with refined prompt and context
+        
+    Returns:
+        Dict with before, after, and why fields
+    """
     try:
         logger.info(f"Enhancing prompt of length: {len(data.refined)}")
 
         system_prompt = """
-You are **Promptodactyl**, an expert-level Prompt Architect.
-Your mission is to take an *already refined prompt* and elevate it further — aligning it precisely with the user’s provided **audience**, **desired outcome**, and **constraints**.
-Your adjustments must sound deliberate, precise, and human-grade in intent.
+You are an expert-level Prompt Architect.
+Transform a refined prompt into a contextually enhanced version based on audience, outcome, and constraints.
+Return valid JSON only with: before, after, why.
 """
-
-        active_hint = data.hint or get_category_hint(data.refined, data.category)
 
         user_prompt = f"""
 Refined prompt:
 {data.refined}
 
-Context:
-- Audience: {data.audience or "not specified"}
-- Desired outcome: {data.outcome or "not specified"}
-- Constraints: {data.constraints or "none"}
-- Category hint: {active_hint}
+Audience: {data.audience or "not specified"}
+Desired outcome: {data.outcome or "not specified"}
+Constraints: {data.constraints or "none"}
 
-Enhance this refined prompt by aligning it perfectly with audience, outcome, and constraints.
-Keep structure intact but increase specificity, tone alignment, and professionalism.
-Return valid JSON with 'before', 'after', and 'why'.
+Enhance the tone, focus, and clarity to suit this exact situation.
 """
 
         response = client.chat.completions.create(
             model=MODEL_NAME,
-            temperature=0.55,
+            temperature=0.6,
             timeout=API_TIMEOUT,
             response_format={"type": "json_object"},
             messages=[
@@ -270,28 +248,42 @@ Return valid JSON with 'before', 'after', and 'why'.
             ],
         )
 
+        # Log token usage for cost monitoring
+        if hasattr(response, 'usage') and response.usage:
+            logger.info(f"Token usage - Prompt: {response.usage.prompt_tokens}, "
+                       f"Completion: {response.usage.completion_tokens}, "
+                       f"Total: {response.usage.total_tokens}")
+
         content = response.choices[0].message.content
         result = json.loads(content)
 
-        for k in ["before", "after", "why"]:
-            if k not in result:
-                raise ValueError(f"Missing key in AI output: {k}")
-            result[k] = ensure_str(result[k])
-            if not result[k]:
-                raise ValueError(f"Empty value for key: {k}")
+        # Validate response structure
+        required_keys = ["before", "after", "why"]
+        if not all(k in result for k in required_keys):
+            logger.error(f"Missing required keys in AI response. Got: {result.keys()}")
+            raise ValueError("Invalid response structure from AI")
 
-        formatted_after = format_json_readable(result["after"])
+        # Validate response content
+        for key in required_keys:
+            if not isinstance(result[key], str) or not result[key].strip():
+                logger.error(f"Invalid {key} field in AI response")
+                raise ValueError(f"Invalid {key} field in response")
 
         return {
-            "before": safe_text(result["before"]),
-            "after_raw": formatted_after["raw"],
-            "after_pretty": formatted_after["pretty"],
-            "why": safe_text(result["why"]),
+            "before": safe_text(result["before"]).strip(),
+            "after": safe_text(result["after"]).strip(),
+            "why": safe_text(result["why"]).strip(),
         }
 
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to parse AI response")
+    except ValueError as e:
+        logger.error(f"Validation error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Invalid AI response format")
     except Exception as e:
         logger.error(f"Enhancement error: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Enhancement failed")
+        raise HTTPException(status_code=500, detail="An error occurred during enhancement")
 
 
 # --- Local Run ---
