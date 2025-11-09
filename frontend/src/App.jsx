@@ -199,26 +199,40 @@ export default function App() {
         <p className="text-gray-600 text-lg">Prompts that take flight.</p>
       </header>
 
-      {/* Input Section */}
-      <section className="w-full max-w-3xl" aria-label="Prompt input">
-        <label htmlFor="prompt-input" className="sr-only">
-          Enter your prompt
-        </label>
-        <textarea
-          id="prompt-input"
-          rows={8}
-          className="w-full p-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 resize-none"
-          placeholder="Enter your prompt (Cmd/Ctrl+Enter to refine)"
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            setRefineError(null);
-          }}
-          onKeyDown={handleKeyDown}
-          disabled={loading}
-          aria-describedby="char-count"
-          aria-invalid={!!refineError}
-        />
+     {/* Input Section */}
+<section className="w-full max-w-3xl" aria-label="Prompt input">
+  <label htmlFor="prompt-input" className="sr-only">
+    Enter your prompt
+  </label>
+
+  <textarea
+    id="prompt-input"
+    rows={8}
+    className="w-full p-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 resize-none"
+    placeholder="Enter your prompt (Press Enter to refine, Shift+Enter for newline)"
+    value={text}
+    onChange={(e) => {
+      setText(e.target.value);
+      setRefineError(null);
+    }}
+    onKeyDown={(e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault(); // Stop new line
+        if (!loading) handleRefine(); // Trigger refinement
+      }
+    }}
+    disabled={loading}
+    aria-describedby="char-count"
+    aria-invalid={!!refineError}
+  />
+
+  {/* Optional discoverability hint */}
+  <p className="text-xs text-gray-500 mt-2 text-right">
+    Press <kbd className="px-1 py-0.5 bg-gray-100 border rounded">Enter</kbd> to refine,
+    <kbd className="px-1 py-0.5 bg-gray-100 border rounded ml-1">Shift + Enter</kbd> for newline
+  </p>
+</section>
+
         <div id="char-count" className="text-sm text-right text-gray-500 mt-1">
           {text.length} / 2000
         </div>
