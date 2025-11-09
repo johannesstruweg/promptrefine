@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
-import PrivacyPolicy from "./Privacy_policy";
 
 export default function App() {
   const [text, setText] = useState("");
@@ -12,6 +11,8 @@ export default function App() {
   const [enhanceError, setEnhanceError] = useState(null);
   const [copied, setCopied] = useState(false);
   const [copiedEnhanced, setCopiedEnhanced] = useState(false);
+
+  const [showPolicy, setShowPolicy] = useState(false);
 
   const [audience, setAudience] = useState("");
   const [outcome, setOutcome] = useState("");
