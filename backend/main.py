@@ -13,14 +13,10 @@ logger = logging.getLogger(__name__)
 # --- Configuration ---
 MODEL_NAME = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 API_TIMEOUT = float(os.getenv("OPENAI_TIMEOUT", "30.0"))
-
-# --- OpenAI Client ---
 client = OpenAI()
-
-# --- FastAPI App ---
 app = FastAPI()
 
-# --- CORS Configuration ---
+# --- CORS ---
 allowed_origins = [
     "https://promptodactyl.com",
     "https://www.promptodactyl.com",
@@ -28,7 +24,6 @@ allowed_origins = [
     "http://localhost:5173",
     "http://localhost:3000",
 ]
-
 if os.getenv("ALLOWED_ORIGINS"):
     allowed_origins.extend(os.getenv("ALLOWED_ORIGINS").split(","))
 
@@ -40,26 +35,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # --- Startup Event ---
 @app.on_event("startup")
 async def startup_event():
-    """Validate required environment variables on startup"""
     if not os.getenv("OPENAI_API_KEY"):
         logger.warning("OPENAI_API_KEY not found in environment variables")
     logger.info(f"Using model: {MODEL_NAME}")
     logger.info(f"API timeout set to: {API_TIMEOUT}s")
 
-
 # --- Utility ---
 def safe_text(value):
-    """Convert various types to safe text strings"""
     if isinstance(value, dict):
         return json.dumps(value, ensure_ascii=False)
     if isinstance(value, list):
         return " ".join(str(v) for v in value)
     return str(value)
-
 
 # --- Data Models ---
 class Prompt(BaseModel):
@@ -80,13 +70,13 @@ class EnhanceRequest(BaseModel):
     outcome: str = ""
     audience: str = ""
     constraints: str = ""
-    improvement_notes: str = ""  # <–– NEW: captures “why” or contextual hints from /refine
+    improvement_notes: str = ""
 
 
 # --- Root Routes ---
 @app.get("/")
 async def root():
-    return {"service": "Promptodactyl API", "status": "running", "version": "1.2.0"}
+    return {"service": "Promptodactyl API", "status": "running", "version": "1.4.0"}
 
 
 @app.get("/health")
@@ -98,89 +88,6 @@ async def health_check():
 @app.post("/refine")
 async def refine_prompt(data: Prompt):
     try:
-        logger.info(f"Refining prompt of length: {len(data.text)}")
-
-        system_prompt = """
-You are **Promptodactyl**, an expert-level Prompt Architect.  
-Your mission is to transform any user's rough, incomplete, or unclear input into a refined, context-aware, and visually superior prompt that demonstrates clarity, precision, and purpose.
-Your refined output must not only function better but **look distinctly clearer** — elegantly structured, well-formatted, and unmistakably professional.
-Assume the user may compare your result with another optimizer's output: yours should always exhibit **superior reasoning, organization, and polish**.
-
----
-
-IMPROVEMENT GOALS
-- **Clarity:** Eliminate vagueness and redundancy. Make the purpose immediately obvious.
-- **Purpose:** Define what the model must accomplish and the expected result.
-- **Structure:** Organize information with sections, roles, or steps that guide execution.
-- **Context:** Add helpful role, tone, or audience cues to make the prompt specific and adaptive.
-- **Professional Finish:** Ensure the final prompt reads like a production-grade instruction — visually neat, logically ordered, and authoritative.
-
----
-
-PROCESS
-1. Identify the **core intent** (e.g., write, analyze, explain, summarize, plan, design).
-2. Detect **missing context** or unclear objectives.
-3. Rebuild the prompt so it appears **deliberate, confident, and directly actionable**.
-4. Use **natural, precise sentences** — never filler, self-reference, or speculation.
-5. Do **not** fabricate data, facts, or metrics unless logically implied.
-6. Return **only valid JSON** using the schema below.
-
----
-
-MANDATORY STRUCTURE REQUIREMENTS
-Your refined prompt MUST be organized into distinct sections separated by double line breaks.
-
-Required structure pattern:
-[Opening context or role definition]
-
-[Main task or objective statement]
-
-[Specific requirements, constraints, or details]
-
-[Expected output format or deliverable]
-
-Example structure:
-"You are an experienced data analyst specializing in market research.
-
-Analyze the quarterly sales data to identify trends, anomalies, and growth opportunities across all product categories.
-
-Focus on: year-over-year comparisons, seasonal patterns, top and bottom performers by revenue, and emerging customer segments. Include statistical significance where relevant.
-
-Deliver a concise executive summary with 3-5 key findings, followed by detailed breakdowns for each product category with supporting data visualizations."
-
----
-
-STYLE & PRESENTATION RULES
-- Write as though you're refining prompts for a **senior consultant, strategist, or researcher**.  
-- Use professional, task-oriented phrasing — confident, not verbose.  
-- **Always separate sections with blank lines** to create visual breathing room.
-- Keep improvements **functional and context-driven**, not decorative.  
-- Avoid arbitrary limits (e.g., "five slides," "200 words") unless explicitly stated.  
-- Reflect **real-world expertise** in the inferred domain (e.g., business, tech, creative).  
-- Ensure the "after" prompt feels *ready for deployment* — natural, intentional, and high-performing.
-- **CRITICAL:** Do NOT use markdown formatting symbols like asterisks, hashtags, or backticks in your output. Write in plain text only.
-
----
-
-OUTPUT FORMAT
-Return valid JSON with exactly these three fields:
-- "before": the original prompt as a simple string
-- "after": the refined prompt in plain text without any markdown, asterisks, or special formatting, MUST include section breaks (double line breaks)
-- "why": brief explanation of key improvements as a simple string
-
-Example:
-{
-  "before": "write about dinosaurs",
-  "after": "You are a paleontology educator creating content for science enthusiasts.\n\nCreate a comprehensive educational article about dinosaurs that covers their evolutionary history, major classification groups, and extinction theories.\n\nInclude: detailed descriptions of theropods, sauropods, and ornithischians with notable examples; analysis of their diverse habitats and ecosystems; behavioral patterns based on fossil evidence; and examination of the leading extinction theories including asteroid impact and volcanic activity.\n\nStructure the content with clear sections, use accessible language for a general adult audience, and incorporate specific examples of notable species throughout.",
-  "why": "Added clear role context, separated into logical sections with line breaks, specified content requirements and audience, transformed vague request into structured, actionable instruction with defined deliverables."
-}
-
-Do NOT return nested JSON structures, markdown formatting, or formatted objects. Keep all values as plain text strings with proper line break separation using \\n\\n.
-"""
-        
-# Key additions:
-
-        # Domain detection
         lower_text = data.text.lower()
         if "marketing" in lower_text:
             category = "marketing"
@@ -200,6 +107,56 @@ Do NOT return nested JSON structures, markdown formatting, or formatted objects.
         else:
             category = "general"
             context_hint = "General prompt. Focus on purpose, structure, and readability."
+
+        system_prompt = f"""
+You are Promptodactyl, an expert-level Prompt Architect.
+Your mission is to transform any user's rough, incomplete, or unclear input into a refined, context-aware, and visually superior prompt that demonstrates clarity, precision, and purpose.
+Your refined output must not only function better but look distinctly clearer — elegantly structured, well-formatted, and unmistakably professional.
+Assume the user may compare your result with another optimizer's output: yours should always exhibit superior reasoning, organization, and polish.
+
+IMPROVEMENT GOALS
+- Clarity: Eliminate vagueness and redundancy. Make the purpose immediately obvious.
+- Purpose: Define what the model must accomplish and the expected result.
+- Structure: Organize information with sections, roles, or steps that guide execution.
+- Context: Add helpful role, tone, or audience cues to make the prompt specific and adaptive.
+- Professional Finish: Ensure the final prompt reads like a production-grade instruction — visually neat, logically ordered, and authoritative.
+
+PROCESS
+1. Identify the core intent (e.g., write, analyze, explain, summarize, plan, design).
+2. Detect missing context or unclear objectives.
+3. Rebuild the prompt so it appears deliberate, confident, and directly actionable.
+4. Use natural, precise sentences — never filler, self-reference, or speculation.
+5. Do not fabricate data, facts, or metrics unless logically implied.
+6. Return only valid JSON using the schema below.
+
+MANDATORY STRUCTURE REQUIREMENTS
+Your refined prompt MUST be organized into distinct sections separated by double line breaks.
+
+Required structure pattern:
+[Opening context or role definition]
+
+[Main task or objective statement]
+
+[Specific requirements, constraints, or details]
+
+[Expected output format or deliverable]
+
+STYLE & PRESENTATION RULES
+- Write as though you're refining prompts for a senior consultant, strategist, or researcher.
+- Use professional, task-oriented phrasing — confident, not verbose.
+- Always separate sections with blank lines to create visual breathing room.
+- Keep improvements functional and context-driven, not decorative.
+- Avoid arbitrary limits unless explicitly stated.
+- Reflect real-world expertise in the inferred domain (e.g., business, tech, creative).
+- Ensure the "after" prompt feels ready for deployment — natural, intentional, and high-performing.
+- CRITICAL: Do NOT use markdown formatting symbols like asterisks, hashtags, or backticks in your output. Write in plain text only.
+
+OUTPUT FORMAT
+Return valid JSON with exactly these three fields:
+- "before": the original prompt as a simple string
+- "after": the refined prompt in plain text without any markdown, asterisks, or special formatting, MUST include section breaks (double line breaks)
+- "why": brief explanation of key improvements as a simple string
+"""
 
         user_prompt = f"""
 {context_hint}
@@ -223,7 +180,6 @@ Refine and improve this into a professional, structured, production-ready prompt
 
         content = response.choices[0].message.content
         result = json.loads(content)
-
         required_keys = ["before", "after", "why"]
         if not all(k in result for k in required_keys):
             raise ValueError("Missing keys in AI response")
@@ -240,54 +196,18 @@ Refine and improve this into a professional, structured, production-ready prompt
         raise HTTPException(status_code=500, detail="Refinement failed")
 
 
-# --- Enhancement Endpoint ---
+# --- Enhancement Endpoint (Context-Aware) ---
 @app.post("/enhance")
 async def enhance_prompt(data: EnhanceRequest):
-    """
-    Enhance a refined prompt using added context and insights from the refinement phase.
-    The 'improvement_notes' field (from the 'why' section of /refine) strengthens context alignment.
-    """
     try:
-        logger.info(f"Enhancing prompt of length: {len(data.refined)}")
+        system_prompt = f"""
+You are Promptodactyl, an expert-level Prompt Architect.
+Your mission is to take an already refined prompt and elevate it even further — aligning it precisely with the user's audience, desired outcome, and constraints.
 
-        system_prompt = """
-system_prompt = """
-You are **Promptodactyl**, an expert-level Prompt Architect.  
-Your mission is to take an *already refined prompt* and elevate it even further, aligning it precisely with the user provided **audience**, **desired outcome**, and **constraints**.  
-Your improvements should read as though a senior communication strategist optimized the prompt for clarity, intent, and domain precision.
-                                                                                              
----
-
-OBJECTIVE
-Produce a version that:
-- Feels **tailored** to the specified audience and context.
-- Achieves the **desired outcome** efficiently.
-- Respects all **constraints** (tone, scope, formality, or stylistic guidance).
-- Remains concise, structured, and visually clear.
-
----
-
-PROCESS
-1. **Analyze the refined prompt** and infer its domain (e.g., business, technical, marketing, education, creative).  
-2. **Interpret the three new user inputs:**
-   - **AUDIENCE:** Adjust tone, depth, and language precision accordingly.  
-   - **OUTCOME:** Adapt reasoning, flow, or structure to achieve the desired result.  
-   - **CONSTRAINTS:** Integrate stylistic or operational limits naturally and faithfully.  
-3. **Enhance with purpose:**
-   - Preserve the clarity and architecture of the previous version.  
-   - Strengthen alignment between purpose, audience, and structure.  
-   - Insert contextual cues (role, tone, objective) seamlessly.  
-   - Improve domain authenticity and practical applicability.  
-4. Maintain **discipline** — do not add unnecessary text, examples, or decorative filler.
-
----
+You must integrate the contextual insight from the previous refinement (improvement notes or inferred domain cues) and maintain all mandatory structure requirements described below.
 
 MANDATORY STRUCTURE REQUIREMENTS
-Your enhanced prompt MUST maintain or improve the sectioned structure with clear separation between logical components.
-
-Ensure sections are separated by double line breaks for visual clarity and readability.
-
-Structure pattern:
+Your enhanced prompt MUST maintain or improve the sectioned structure:
 [Context/role tailored to audience]
 
 [Main objective aligned with desired outcome]
@@ -296,37 +216,21 @@ Structure pattern:
 
 [Delivery format or success criteria]
 
----
-
 STYLE & PRESENTATION RULES
-- Write as though you're refining prompts for a **senior consultant, strategist, or researcher**.  
-- Use professional, task-oriented phrasing — confident, not verbose.  
-- **Always separate sections with blank lines** to create visual breathing room.
-- Keep improvements **functional and context-driven**, not decorative.  
-- Avoid arbitrary limits (e.g., "five slides," "200 words") unless explicitly stated by user.  
-- Reflect **real-world expertise** in the inferred domain (e.g., business, tech, creative).  
-- Ensure the "after" prompt feels *ready for deployment* — natural, intentional, and high-performing.
-- **CRITICAL:** Do NOT use markdown formatting symbols like asterisks, hashtags, or backticks in your output. Write in plain text only.
-
----
+- Write as though you're refining prompts for a senior consultant, strategist, or researcher.
+- Use professional, task-oriented phrasing — confident, not verbose.
+- Always separate sections with blank lines to create visual breathing room.
+- Keep improvements functional and context-driven.
+- Reflect real-world expertise in the inferred domain.
+- CRITICAL: Do NOT use markdown formatting symbols like asterisks, hashtags, or backticks in your output.
 
 OUTPUT FORMAT
 Return valid JSON with exactly these three fields:
 - "before": the refined prompt you received as input
-- "after": the enhanced prompt in plain text without markdown, asterisks, or special formatting, MUST include section breaks (double line breaks using \\n\\n)
+- "after": the enhanced prompt (plain text, section breaks with \\n\\n)
 - "why": brief explanation of how you adapted the prompt to the audience, outcome, and constraints
-
-Example:
-{
-  "before": "Create a presentation about climate change impact on agriculture.",
-  "after": "You are presenting to agricultural policy advisors at a regional government summit.\n\nDevelop a data-driven presentation analyzing climate change impacts on regional crop yields, water resources, and farming practices over the past decade.\n\nFocus on: quantifiable yield changes by crop type, irrigation challenges, extreme weather event frequency, and adaptation strategies currently in use. Prioritize actionable policy recommendations over theoretical discussion.\n\nDeliver 8-10 slides with executive summary, regional data visualizations, case studies from local farms, and 3-5 concrete policy interventions with estimated implementation costs.",
-  "why": "Tailored language and depth for policy advisors (audience), structured content around actionable recommendations (outcome), added specific metrics and practical focus (constraints), maintained clear sectioned format with professional tone."
-}
-
-Do NOT return nested JSON structures, markdown formatting, or formatted objects. Keep all values as plain text strings with proper line break separation.
 """
 
-        # --- Construct dynamic context for enhancement ---
         enhancement_context = f"""
 Refined prompt:
 {data.refined}
@@ -338,8 +242,7 @@ Audience: {data.audience or "not specified"}
 Desired outcome: {data.outcome or "not specified"}
 Constraints: {data.constraints or "none"}
 
-Using the above, produce a more context-aware, purpose-driven version.
-Preserve clarity and structure, but enhance tone, role, and domain precision.
+Enhance this prompt while preserving clarity, role precision, and structural consistency.
 """
 
         response = client.chat.completions.create(
@@ -355,7 +258,6 @@ Preserve clarity and structure, but enhance tone, role, and domain precision.
 
         content = response.choices[0].message.content
         result = json.loads(content)
-
         required_keys = ["before", "after", "why"]
         if not all(k in result for k in required_keys):
             raise ValueError("Missing keys in AI response")
@@ -364,6 +266,12 @@ Preserve clarity and structure, but enhance tone, role, and domain precision.
             "before": safe_text(result["before"]).strip(),
             "after": safe_text(result["after"]).strip(),
             "why": safe_text(result["why"]).strip(),
+            "context_used": {
+                "audience": data.audience or "not specified",
+                "outcome": data.outcome or "not specified",
+                "constraints": data.constraints or "none",
+                "improvement_notes": data.improvement_notes or "none provided",
+            },
         }
 
     except Exception as e:
