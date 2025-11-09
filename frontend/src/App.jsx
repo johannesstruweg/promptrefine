@@ -14,6 +14,8 @@ export default function App() {
 
   const [showPolicy, setShowPolicy] = useState(false);
 
+  const [enterToSubmit, setEnterToSubmit] = useState(true);
+
   const [audience, setAudience] = useState("");
   const [outcome, setOutcome] = useState("");
   const [constraints, setConstraints] = useState("");
@@ -206,10 +208,11 @@ export default function App() {
 
   // --- Keyboard Support ---
   const handleKeyDown = (e) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-      handleRefine();
-    }
-  };
+  if (enterToSubmit && e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();  // stops newline
+    handleRefine();      // runs the refine
+  }
+};
 
   return (
     <main className="min-h-screen bg-white flex flex-col items-center justify-start p-6">
