@@ -160,38 +160,84 @@ Return only valid JSON in the defined format.
         logger.error(f"Refinement error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Refinement failed: {str(e)}")
 
-# --- Enhancement Endpoint ---
+# --- Enhancement Endpoint (Second-Stage Refinement) ---
 @app.post("/enhance")
 async def enhance_prompt(data: dict):
+    """
+    Accepts a refined prompt and optional context details for deeper optimization.
+    Expected keys: 'refined', 'outcome', 'audience', 'constraints'
+    """
     try:
         base_prompt = data.get("refined", "")
         outcome = data.get("outcome", "")
         audience = data.get("audience", "")
         constraints = data.get("constraints", "")
 
-        logger.info("Enhancing refined prompt")
+        logger.info("Enhancing refined prompt with contextual intelligence")
 
+        # --- Advanced Contextual System Prompt ---
         system_prompt = """
-You are a senior prompt optimization specialist. 
-Your job is to refine an already optimized prompt using contextual details.
-Return valid JSON only with keys: before, after, why.
+You are an expert-level Prompt Architect.
+Your mission is to transform a refined prompt into an elite, context-optimized version
+using specific real-world parameters provided by the user (audience, outcome, constraints).
+
+Follow this process:
+1. **Interpret Context:**
+   - Analyze audience type (executives, developers, marketers, students, etc.) and adjust vocabulary, tone, and depth accordingly.
+   - Align with desired outcome (insight, decision, explanation, content generation, analysis, etc.) and optimize for that goal.
+   - Apply constraints precisely — e.g., brevity, tone, formality, style, or domain limits.
+
+2. **Enhance with Purpose:**
+   - Retain logical structure and clarity from the refined version.
+   - Integrate the provided audience, outcome, and constraints naturally within the wording.
+   - Strengthen reasoning depth, contextual precision, and usability.
+   - Make the prompt sound purpose-built for this exact use case.
+
+3. **Balance and Style:**
+   - Be assertive in your transformation but preserve the core intent.
+   - Prefer concise, high-performance wording over verbosity.
+   - You may restructure or reframe slightly if it increases clarity or alignment.
+
+Common domain mappings:
+- Business → clarity, brevity, actionability
+- Technical → precision, validation, structure
+- Marketing → persuasive tone, audience focus, measurable results
+- Education → clarity, empathy, scaffolding
+- Creative → vividness, stylistic coherence, imagination
+
+Return valid JSON only with:
+{
+  "before": "...original refined prompt...",
+  "after": "...contextually enhanced version...",
+  "why": "...explanation of how audience, outcome, and constraints influenced the prompt..."
+}
 """
 
+        # --- Context-Aware User Prompt ---
         user_prompt = f"""
-Refined prompt to improve:
+You are enhancing a refined prompt. Integrate and adapt it based on the following context.
+
+---
+Refined prompt:
 {base_prompt}
 
-Additional details:
+User context:
+- Audience: {audience or "not specified"}
 - Desired outcome: {outcome or "not specified"}
-- Intended audience: {audience or "not specified"}
-- Constraints/requirements: {constraints or "not specified"}
+- Constraints: {constraints or "none"}
+---
 
-Enhance and return valid JSON only.
+Guidelines:
+- Adjust tone, focus, and structure for the specified audience and purpose.
+- Explicitly reflect any constraints in how the task is described or limited.
+- The enhanced prompt should sound like it was designed *only* for this situation.
+- Do not add commentary or meta text — return valid JSON only.
 """
 
+        # --- OpenAI Call ---
         response = client.chat.completions.create(
             model="gpt-4o-mini",
-            temperature=0.4,
+            temperature=0.6,  # slightly higher for creativity and contextual nuance
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -205,12 +251,16 @@ Enhance and return valid JSON only.
         if not all(k in result for k in ["before", "after", "why"]):
             raise ValueError("Invalid response structure from AI")
 
+        logger.info("Contextual enhancement successful")
         return {
             "before": result["before"].strip(),
             "after": result["after"].strip(),
             "why": result["why"].strip(),
         }
 
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to parse AI response")
     except Exception as e:
         logger.error(f"Enhancement error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Enhancement failed: {str(e)}")
