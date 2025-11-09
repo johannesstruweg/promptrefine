@@ -151,51 +151,45 @@ async def health_check():
 @app.post("/refine")
 async def refine_prompt(data: Prompt):
     try:
-        logger.info(f"Refining prompt of length: {len(data.text)}")
+        logger.info(f"Refining prompt: {data.text[:60]}...")
 
         system_prompt = """
 You are **Promptodactyl**, an expert Prompt Engineer and Communication Designer.
-Your mission is to transform any user’s rough, incomplete, or unclear input into a refined, context-aware, and visually superior prompt that demonstrates clarity, precision, and purpose.
-
-Your refined output must not only function better but **look distinctly clearer** — elegantly structured, well-formatted, and unmistakably professional.
+Your job is to take any rough or unclear input and refine it into a polished, structured, and ready-to-run prompt.
+Return only JSON with keys: before, after, why.
 """
 
-        lower_text = data.text.lower()
-        if "marketing" in lower_text:
+        # --- Detect category ---
+        txt = data.text.lower()
+        if "marketing" in txt:
             category = "marketing"
-        elif "strategy" in lower_text or "business" in lower_text:
+        elif "strategy" in txt or "business" in txt:
             category = "business"
-        elif "code" in lower_text or "api" in lower_text or "function" in lower_text:
+        elif "code" in txt or "api" in txt:
             category = "code"
-        elif "design" in lower_text or "visual" in lower_text:
+        elif "design" in txt or "visual" in txt:
             category = "design"
-        elif "teach" in lower_text or "learn" in lower_text:
+        elif "teach" in txt or "learn" in txt:
             category = "education"
-        elif "presentation" in lower_text or "slides" in lower_text or "deck" in lower_text:
+        elif "presentation" in txt or "slides" in txt or "deck" in txt:
             category = "presentation"
         else:
             category = "general"
 
         category_hint = get_category_hint(data.text, category)
 
-        context_hint = f"""
-Detected category: {category.upper()}  
-{category_hint}
-
-Show a visibly improved version of the user's input.
-Demonstrate how structure, tone, and specificity can turn a vague prompt into a professional, production-ready one.
-"""
-
         user_prompt = f"""
-{context_hint}
+Category: {category.upper()}
+Hint: {category_hint}
 
 User input:
 {data.text}
 
-Refine this into a structured, ready-to-run prompt that preserves intent while improving tone, role, and precision.
+Refine this prompt for clarity, tone, and structure.
 Return valid JSON with 'before', 'after', and 'why'.
 """
 
+        # --- Call OpenAI ---
         response = client.chat.completions.create(
             model=MODEL_NAME,
             temperature=0.45,
@@ -207,15 +201,17 @@ Return valid JSON with 'before', 'after', and 'why'.
             ],
         )
 
-        content = response.choices[0].message.content
-        result = json.loads(content)
+        content = response.choices[0].message.content or ""
+        logger.info(f"Raw model response: {content[:120]}...")
 
+        try:
+            result = json.loads(content)
+        except Exception:
+            result = {"before": data.text, "after": content, "why": "Model output not valid JSON."}
+
+        # --- Normalize and format ---
         for k in ["before", "after", "why"]:
-            if k not in result:
-                raise ValueError(f"Missing key in AI output: {k}")
-            result[k] = ensure_str(result[k])
-            if not result[k]:
-                raise ValueError(f"Empty value for key: {k}")
+            result[k] = ensure_str(result.get(k, ""))
 
         formatted_after = format_json_readable(result["after"])
 
@@ -229,8 +225,9 @@ Return valid JSON with 'before', 'after', and 'why'.
         }
 
     except Exception as e:
-        logger.error(f"Refinement error: {str(e)}", exc_info=True)
+        logger.error(f"Refine error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Refinement failed")
+
 
 
 # --- Enhancement Endpoint ---
