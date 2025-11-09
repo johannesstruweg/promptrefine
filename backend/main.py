@@ -84,7 +84,7 @@ async def health_check():
     return {"status": "healthy"}
 
 
-# --- Core Refinement Endpoint ---
+# --- Core Refinement Endpoint (with Dynamic Context Reflection) ---
 @app.post("/refine")
 async def refine_prompt(data: Prompt):
     try:
@@ -184,54 +184,53 @@ Refine and improve this into a professional, structured, production-ready prompt
         if not all(k in result for k in required_keys):
             raise ValueError("Missing keys in AI response")
 
+        # --- Dynamic context reflection: infer next-step placeholder questions ---
+        try:
+            reflection_prompt = f"""
+You are Promptodactyl's Context Mirror.
+Given the refined prompt and improvement notes below, infer what 3 short, natural follow-up questions would help clarify audience, outcome, or constraints.
+The questions must sound context-aware, not generic.
+
+Refined prompt:
+{result['after']}
+
+Improvement notes:
+{result['why']}
+
+Respond ONLY as valid JSON with:
+{{"questions": ["q1", "q2", "q3"]}}
+"""
+
+            reflection = client.chat.completions.create(
+                model=MODEL_NAME,
+                temperature=0.6,
+                timeout=10,
+                response_format={"type": "json_object"},
+                messages=[{"role": "user", "content": reflection_prompt}],
+            )
+
+            dynamic_qs = json.loads(reflection.choices[0].message.content)["questions"]
+
+        except Exception as sub_e:
+            logger.warning(f"Context reflection failed: {str(sub_e)}")
+            dynamic_qs = [
+                "Who is this for?",
+                "What is the main purpose?",
+                "Any tone or format constraints?"
+            ]
+
         return {
             "before": safe_text(result["before"]).strip(),
             "after": safe_text(result["after"]).strip(),
             "why": safe_text(result["why"]).strip(),
             "category": category,
+            "context_questions": dynamic_qs,
         }
 
     except Exception as e:
         logger.error(f"Refinement error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Refinement failed")
 
-
-# --- Enhancement Endpoint (Context-Aware + Intelligent Placeholders) ---
-@app.post("/enhance")
-async def enhance_prompt(data: EnhanceRequest):
-    try:
-        # --- Infer likely domain from previous refinement or refined text ---
-        text = (data.improvement_notes or data.refined).lower()
-        if any(k in text for k in ["marketing", "campaign", "audience", "brand"]):
-            domain = "marketing"
-            placeholder_audience = "Is this for clients, prospects, or internal stakeholders?"
-            placeholder_outcome = "Should it drive awareness, engagement, or conversion?"
-            placeholder_constraints = "Any brand tone, approval, or compliance limits?"
-        elif any(k in text for k in ["student", "teacher", "lesson", "education", "course"]):
-            domain = "education"
-            placeholder_audience = "Is this meant for students, instructors, or parents?"
-            placeholder_outcome = "Should it simplify learning or assess understanding?"
-            placeholder_constraints = "Any grade level or curriculum constraints?"
-        elif any(k in text for k in ["code", "api", "developer", "function", "script"]):
-            domain = "technical"
-            placeholder_audience = "Is this for developers, technical writers, or product teams?"
-            placeholder_outcome = "Should the output be working code or conceptual guidance?"
-            placeholder_constraints = "Any frameworks, APIs, or runtime limits to respect?"
-        elif any(k in text for k in ["design", "visual", "creative", "mockup", "prototype"]):
-            domain = "design"
-            placeholder_audience = "Is this for a client presentation, portfolio, or user test?"
-            placeholder_outcome = "Is the goal to convey aesthetics, concept, or usability?"
-            placeholder_constraints = "Any color palette, medium, or resolution constraints?"
-        elif any(k in text for k in ["strategy", "business", "plan", "proposal"]):
-            domain = "business"
-            placeholder_audience = "Is this for executives, investors, or partners?"
-            placeholder_outcome = "Should it persuade, inform, or guide a decision?"
-            placeholder_constraints = "Any budget, timeline, or scope restrictions?"
-        else:
-            domain = "general"
-            placeholder_audience = "Who is this primarily intended for?"
-            placeholder_outcome = "What is the practical goal of this prompt?"
-            placeholder_constraints = "Any tone, length, or format limits?"
 
         # --- Core system instructions (unchanged from your version) ---
         system_prompt = f"""
@@ -265,7 +264,18 @@ Return valid JSON with exactly these three fields:
 - "why": brief explanation of how you adapted the prompt to the audience, outcome, and constraints
 """
 
-        # --- Enriched enhancement context with contextual placeholders ---
+              # --- Build enhancement context (using dynamic context questions if available) ---
+        dynamic_qs = getattr(data, "context_questions", None)
+
+        if dynamic_qs and isinstance(dynamic_qs, list) and len(dynamic_qs) >= 3:
+            inferred_audience = dynamic_qs[0]
+            inferred_outcome = dynamic_qs[1]
+            inferred_constraints = dynamic_qs[2]
+        else:
+            inferred_audience = "Who is this for?"
+            inferred_outcome = "What should this achieve?"
+            inferred_constraints = "Any tone or format constraints?"
+
         enhancement_context = f"""
 Refined prompt:
 {data.refined}
@@ -273,9 +283,13 @@ Refined prompt:
 Improvement notes from previous refinement:
 {data.improvement_notes or "none provided"}
 
-Audience: {data.audience or placeholder_audience}
-Desired outcome: {data.outcome or placeholder_outcome}
-Constraints: {data.constraints or placeholder_constraints}
+Audience: {data.audience or inferred_audience}
+Desired outcome: {data.outcome or inferred_outcome}
+Constraints: {data.constraints or inferred_constraints}
+
+Enhance this prompt while preserving clarity, role precision, and structural consistency.
+"""
+
 
 Enhance this prompt while preserving clarity, role precision, and structural consistency.
 """
