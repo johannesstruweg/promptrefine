@@ -95,8 +95,8 @@ export default function App() {
       setRefineError("Please enter at least 10 characters");
       return;
     }
-    if (trimmed.length > 2000) {
-      setRefineError("Prompt must be less than 2000 characters");
+    if (trimmed.length > 5000) {
+      setRefineError("Max 5000 characters");
       return;
     }
 
@@ -230,7 +230,7 @@ export default function App() {
           aria-invalid={!!refineError}
         />
         <div id="char-count" className="text-sm text-right text-gray-500 mt-1">
-          {text.length} / 2000
+          {text.length} / 5000
         </div>
         
         {refineError && (
@@ -297,7 +297,7 @@ export default function App() {
           {/* Enhancement Inputs */}
           <section className="space-y-4" aria-label="Enhancement options">
             <h2 className="text-sm font-semibold text-gray-700 uppercase">
-              Enhance Further (Optional)
+              Enhance Further?
             </h2>
             
             <div className="space-y-3">
