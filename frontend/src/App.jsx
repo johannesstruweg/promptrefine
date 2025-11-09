@@ -1,322 +1,398 @@
-return (
-  <main className="min-h-screen bg-white flex flex-col items-center justify-start p-6">
-    {/* Header */}
-    <header className="text-center mb-8">
-      <img
-        src="/Promptodactyl_logo.png"
-        alt="Promptodactyl Logo"
-        className="mx-auto mb-4 w-56 h-auto"
-      />
-      <p className="text-gray-600 text-lg">Prompts that take flight.</p>
-    </header>
+import { useState, useRef, useEffect } from "react";
+import axios from "axios";
 
-    {/* Input Section */}
-    <section className="w-full max-w-3xl relative" aria-label="Prompt input">
-      <div className="relative flex items-end bg-gray-50 border border-gray-300 rounded-2xl p-3 shadow-sm focus-within:ring-2 focus-within:ring-blue-500 transition-all">
+export default function App() {
+  const [text, setText] = useState("");
+  const [res, setRes] = useState(null);
+  const [enhanced, setEnhanced] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
+  const [refineError, setRefineError] = useState(null);
+  const [enhanceError, setEnhanceError] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const [copiedEnhanced, setCopiedEnhanced] = useState(false);
+
+  const [audience, setAudience] = useState("");
+  const [outcome, setOutcome] = useState("");
+  const [constraints, setConstraints] = useState("");
+  const [placeholders, setPlaceholders] = useState({
+    audience: "Who's this for?",
+    outcome: "What result are you hoping for?",
+    constraints: "Anything else to consider?",
+  });
+
+  const resultRef = useRef(null);
+  const refineControllerRef = useRef(null);
+  const enhanceControllerRef = useRef(null);
+  
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
+  // --- Placeholder Logic ---
+  const getEnhancePlaceholders = (context) => {
+    const lower = context.toLowerCase();
+    if (lower.includes("code")) {
+      return {
+        audience: "Language or framework?",
+        outcome: "Target behavior/output?",
+        constraints: "Performance or readability?",
+      };
+    }
+    if (lower.includes("business")) {
+      return {
+        audience: "Target audience?",
+        outcome: "Desired outcome?",
+        constraints: "Constraints (budget/time)?",
+      };
+    }
+    if (lower.includes("marketing")) {
+      return {
+        audience: "Target audience?",
+        outcome: "Desired action?",
+        constraints: "Tone or brand voice?",
+      };
+    }
+    if (lower.includes("design")) {
+      return {
+        audience: "Style or mood?",
+        outcome: "Platform or medium?",
+        constraints: "Brand guidelines?",
+      };
+    }
+    if (lower.includes("education")) {
+      return {
+        audience: "Learner type?",
+        outcome: "Goal or level?",
+        constraints: "Examples or depth?",
+      };
+    }
+    return {
+      audience: "Who's this for?",
+      outcome: "What result are you hoping for?",
+      constraints: "Anything else to consider?",
+    };
+  };
+
+  useEffect(() => {
+    if (res?.category) {
+      setPlaceholders(getEnhancePlaceholders(res.category));
+    }
+  }, [res]);
+
+  // --- Refinement ---
+  const handleRefine = async () => {
+    const trimmed = text.trim();
+    if (trimmed.length < 10) {
+      setRefineError("Please enter at least 10 characters");
+      return;
+    }
+    if (trimmed.length > 2000) {
+      setRefineError("Prompt must be less than 2000 characters");
+      return;
+    }
+
+    // Cancel previous request if exists
+    if (refineControllerRef.current) {
+      refineControllerRef.current.abort();
+    }
+    refineControllerRef.current = new AbortController();
+
+    setLoading(true);
+    setRes(null);
+    setEnhanced(null);
+    setRefineError(null);
+    setEnhanceError(null);
+
+    try {
+      const response = await axios.post(
+        `${API_URL}/refine`,
+        { text: trimmed },
+        { signal: refineControllerRef.current.signal }
+      );
+      setRes(response.data);
+      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+    } catch (err) {
+      if (err.name === "CanceledError") return;
+      setRefineError(err.response?.data?.detail || "Something went wrong. Please try again.");
+      console.error("Refinement error:", err);
+    } finally {
+      setLoading(false);
+      refineControllerRef.current = null;
+    }
+  };
+
+  // --- Enhancement ---
+  const handleEnhance = async () => {
+    if (!res?.after) return;
+
+    // Cancel previous request if exists
+    if (enhanceControllerRef.current) {
+      enhanceControllerRef.current.abort();
+    }
+    enhanceControllerRef.current = new AbortController();
+
+    setEnhancing(true);
+    setEnhanced(null);
+    setEnhanceError(null);
+
+    try {
+      const response = await axios.post(
+        `${API_URL}/enhance`,
+        {
+          refined: res.after,
+          audience: audience.trim(),
+          outcome: outcome.trim(),
+          constraints: constraints.trim(),
+        },
+        { signal: enhanceControllerRef.current.signal }
+      );
+      setEnhanced(response.data);
+      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+    } catch (err) {
+      if (err.name === "CanceledError") return;
+      console.error("Enhancement failed:", err);
+      setEnhanceError(err.response?.data?.detail || "Enhancement failed. Please try again.");
+    } finally {
+      setEnhancing(false);
+      enhanceControllerRef.current = null;
+    }
+  };
+
+  // --- Copy Handlers ---
+  const handleCopy = async () => {
+    if (!res?.after) return;
+    try {
+      await navigator.clipboard.writeText(res.after);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Copy failed:", err);
+    }
+  };
+
+  const handleCopyEnhanced = async () => {
+    if (!enhanced?.after) return;
+    try {
+      await navigator.clipboard.writeText(enhanced.after);
+      setCopiedEnhanced(true);
+      setTimeout(() => setCopiedEnhanced(false), 2000);
+    } catch (err) {
+      console.error("Copy failed:", err);
+    }
+  };
+
+  // --- Keyboard Support ---
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      handleRefine();
+    }
+  };
+
+  return (
+    <main className="min-h-screen bg-white flex flex-col items-center justify-start p-6">
+      {/* Header */}
+      <header className="text-center mb-8">
+        <img 
+          src="/Promptodactyl_logo.png" 
+          alt="Promptodactyl Logo" 
+          className="mx-auto mb-4 w-56 h-auto" 
+        />
+        <p className="text-gray-600 text-lg">Prompts that take flight.</p>
+      </header>
+
+      {/* Input Section */}
+      <section className="w-full max-w-3xl" aria-label="Prompt input">
+        <label htmlFor="prompt-input" className="sr-only">
+          Enter your prompt
+        </label>
         <textarea
           id="prompt-input"
-          rows={4}
-          className="flex-1 resize-none bg-transparent text-gray-800 focus:outline-none text-base leading-relaxed placeholder-gray-400 pr-12"
-          placeholder="Type or paste your prompt... (Shift + Enter for newline)"
+          rows={8}
+          className="w-full p-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 resize-none"
+          placeholder="Enter your prompt (Cmd/Ctrl+Enter to refine)"
           value={text}
           onChange={(e) => {
             setText(e.target.value);
             setRefineError(null);
           }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              if (!loading) handleRefine();
-            }
-          }}
+          onKeyDown={handleKeyDown}
           disabled={loading}
-          aria-label="Prompt input"
+          aria-describedby="char-count"
+          aria-invalid={!!refineError}
         />
+        <div id="char-count" className="text-sm text-right text-gray-500 mt-1">
+          {text.length} / 2000
+        </div>
+        
+        {refineError && (
+          <div 
+            className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm"
+            role="alert"
+          >
+            {refineError}
+          </div>
+        )}
+        
+        <div className="flex justify-end mt-3">
+          <button
+            onClick={handleRefine}
+            disabled={loading || text.trim().length < 10}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            aria-label="Refine prompt"
+          >
+            {loading ? "Refining..." : "Refine"}
+          </button>
+        </div>
+      </section>
 
-        {/* Circular Send Button */}
-        <button
-          onClick={handleRefine}
-          disabled={loading || text.trim().length < 10}
-          aria-label="Refine prompt"
-          className="absolute bottom-4 right-4 flex items-center justify-center w-10 h-10 bg-blue-600 text-white rounded-full shadow-sm hover:bg-blue-700 hover:shadow-md transition-all duration-150 disabled:bg-gray-300 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-400"
-        >
-          {loading ? (
-            <svg
-              className="w-5 h-5 animate-spin text-white"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
+      {/* Results Section */}
+      {res && (
+        <div ref={resultRef} className="mt-10 w-full max-w-3xl space-y-10">
+          {/* Refined Output */}
+          <section aria-label="Refined prompt result">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-sm font-semibold text-blue-700 uppercase">
+                Refined Prompt
+              </h2>
+              <button
+                onClick={handleCopy}
+                disabled={!res?.after}
+                className="text-sm text-blue-600 hover:text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 transition-colors"
+                aria-label="Copy refined prompt to clipboard"
+              >
+                {copied ? "✓ Copied!" : "Copy"}
+              </button>
+            </div>
+            
+            <div 
+              className="p-4 bg-gray-50 border border-gray-200 rounded-lg"
+              role="region"
+              aria-label="Refined prompt text"
             >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              ></circle>
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8v4l5-5-5-5v4a12 12 0 00-12 12h4z"
-              ></path>
-            </svg>
-          ) : (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m7-7H5" />
-            </svg>
+              <p className="text-gray-800 whitespace-pre-wrap leading-relaxed select-text">
+                {res.after}
+              </p>
+            </div>
+            
+            <div className="mt-4">
+              <h3 className="text-sm font-semibold text-gray-700 uppercase mb-2">
+                Why It's Better
+              </h3>
+              <p className="text-gray-600 leading-relaxed">{res.why}</p>
+            </div>
+          </section>
+
+          {/* Enhancement Inputs */}
+          <section className="space-y-4" aria-label="Enhancement options">
+            <h2 className="text-sm font-semibold text-gray-700 uppercase">
+              Enhance Further (Optional)
+            </h2>
+            
+            <div className="space-y-3">
+              <input
+                type="text"
+                placeholder={placeholders.audience}
+                value={audience}
+                onChange={(e) => setAudience(e.target.value)}
+                disabled={enhancing}
+                className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-gray-100"
+                aria-label="Target audience"
+              />
+              
+              <input
+                type="text"
+                placeholder={placeholders.outcome}
+                value={outcome}
+                onChange={(e) => setOutcome(e.target.value)}
+                disabled={enhancing}
+                className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-gray-100"
+                aria-label="Desired outcome"
+              />
+              
+              <input
+                type="text"
+                placeholder={placeholders.constraints}
+                value={constraints}
+                onChange={(e) => setConstraints(e.target.value)}
+                disabled={enhancing}
+                className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-gray-100"
+                aria-label="Constraints"
+              />
+            </div>
+
+            {enhanceError && (
+              <div 
+                className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm"
+                role="alert"
+              >
+                {enhanceError}
+              </div>
+            )}
+            
+            <div className="flex justify-end mt-2">
+              <button
+                onClick={handleEnhance}
+                disabled={enhancing}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                aria-label="Enhance prompt"
+              >
+                {enhancing ? "Enhancing..." : "Enhance"}
+              </button>
+            </div>
+          </section>
+
+          {/* Enhanced Output */}
+          {enhanced && (
+            <section aria-label="Enhanced prompt result">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-sm font-semibold text-blue-700 uppercase">
+                  Enhanced Prompt
+                </h2>
+                <button
+                  onClick={handleCopyEnhanced}
+                  disabled={!enhanced?.after}
+                  className="text-sm text-blue-600 hover:text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 transition-colors"
+                  aria-label="Copy enhanced prompt to clipboard"
+                >
+                  {copiedEnhanced ? "✓ Copied!" : "Copy"}
+                </button>
+              </div>
+              
+              <div 
+                className="p-4 bg-gray-50 border border-gray-200 rounded-lg"
+                role="region"
+                aria-label="Enhanced prompt text"
+              >
+                <p className="text-gray-800 whitespace-pre-wrap leading-relaxed select-text">
+                  {enhanced.after}
+                </p>
+              </div>
+              
+              <div className="mt-4">
+                <h3 className="text-sm font-semibold text-gray-700 uppercase mb-2">
+                  Why It's Improved
+                </h3>
+                <p className="text-gray-600 leading-relaxed">{enhanced.why}</p>
+              </div>
+            </section>
           )}
-        </button>
-      </div>
-
-      {refineError && (
-        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm" role="alert">
-          {refineError}
         </div>
       )}
 
-      <div className="text-xs text-gray-500 mt-2 text-right">
-        Press <kbd className="px-1 py-0.5 bg-gray-100 border rounded">Enter</kbd> to refine,
-        <kbd className="px-1 py-0.5 bg-gray-100 border rounded ml-1">Shift + Enter</kbd> for newline
-      </div>
-
-      <div className="text-sm text-gray-400 mt-1 text-right">
-        {text.length} / 2000
-      </div>
-    </section>
-
-    {/* Results Section */}
-    {res && (
-      <div ref={resultRef} className="mt-10 w-full max-w-3xl space-y-10">
-        {/* Refined Output */}
-        <section aria-label="Refined prompt result" className="relative group">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-semibold text-blue-700 uppercase">
-              Refined Prompt
-            </h2>
-            <button
-              onClick={handleCopy}
-              disabled={!res?.after_pretty}
-              className="text-sm text-blue-600 hover:text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full px-3 py-1 transition-colors"
-            >
-              {copied ? "✓ Copied!" : "Copy"}
-            </button>
-          </div>
-
-          <div
-            onClick={handleCopy}
-            role="region"
-            aria-label="Refined prompt text"
-            className="relative group p-4 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer transition hover:border-blue-300 active:ring-2 active:ring-blue-100 select-text overflow-x-auto"
-            title="Click to copy refined prompt"
+      {/* Footer */}
+      <footer className="text-center mt-16 mb-4 text-gray-500 text-sm">
+        <p>
+          Powered by OpenAI • © 2025 Promptodactyl by{" "}
+          <a 
+            href="https://stratagentic.ai" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-blue-600 hover:text-blue-700 transition-colors"
           >
-            <pre
-              className="text-gray-800 text-sm font-mono leading-relaxed whitespace-pre-wrap"
-              dangerouslySetInnerHTML={{
-                __html: res.after_pretty.replace(/```json|```/g, ""),
-              }}
-            ></pre>
-            <span className="absolute top-2 right-3 text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
-              Click to copy
-            </span>
-            {copied && (
-              <span className="absolute bottom-2 right-3 text-xs text-green-600 font-medium">
-                ✓ Copied!
-              </span>
-            )}
-          </div>
-
-          <div className="mt-4">
-            <h3 className="text-sm font-semibold text-gray-700 uppercase mb-2">
-              Why It's Better
-            </h3>
-            <p className="text-gray-600 leading-relaxed">{res.why}</p>
-          </div>
-        </section>
-
-        {/* Enhancement Inputs */}
-        <section className="space-y-4" aria-label="Enhancement options">
-          <h2 className="text-sm font-semibold text-gray-700 uppercase">
-            Enhance Further (Optional)
-          </h2>
-
-          <div className="space-y-3">
-            <input
-              type="text"
-              placeholder={placeholders.audience}
-              value={audience}
-              onChange={(e) => setAudience(e.target.value)}
-              disabled={enhancing}
-              className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-              aria-label="Target audience"
-            />
-            <input
-              type="text"
-              placeholder={placeholders.outcome}
-              value={outcome}
-              onChange={(e) => setOutcome(e.target.value)}
-              disabled={enhancing}
-              className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-              aria-label="Desired outcome"
-            />
-            <input
-              type="text"
-              placeholder={placeholders.constraints}
-              value={constraints}
-              onChange={(e) => setConstraints(e.target.value)}
-              disabled={enhancing}
-              className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-              aria-label="Constraints"
-            />
-          </div>
-
-          {enhanceError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm" role="alert">
-              {enhanceError}
-            </div>
-          )}
-
-          <div className="flex justify-end mt-4">
-            <button
-              onClick={handleEnhance}
-              disabled={enhancing}
-              aria-label="Enhance prompt"
-              className="flex items-center justify-center w-12 h-12 bg-blue-600 text-white rounded-full shadow-sm hover:bg-blue-700 hover:shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-400"
-            >
-              {enhancing ? (
-                <svg
-                  className="w-5 h-5 animate-spin text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v4l5-5-5-5v4a12 12 0 00-12 12h4z"
-                  ></path>
-                </svg>
-              ) : (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="w-5 h-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
-              )}
-            </button>
-          </div>
-        </section>
-
-        {/* Enhanced Output */}
-        {enhanced && (
-          <section aria-label="Enhanced prompt result" className="relative group">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-semibold text-blue-700 uppercase">
-                Enhanced Prompt
-              </h2>
-              <button
-                onClick={handleCopyEnhanced}
-                disabled={!enhanced?.after_pretty}
-                className="text-sm text-blue-600 hover:text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full px-3 py-1 transition-colors"
-              >
-                {copiedEnhanced ? "✓ Copied!" : "Copy"}
-              </button>
-            </div>
-
-            <div
-              onClick={handleCopyEnhanced}
-              role="region"
-              aria-label="Enhanced prompt text"
-              className="relative group p-4 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer transition hover:border-blue-300 active:ring-2 active:ring-blue-100 select-text overflow-x-auto"
-              title="Click to copy enhanced prompt"
-            >
-              <pre
-                className="text-gray-800 text-sm font-mono leading-relaxed whitespace-pre-wrap"
-                dangerouslySetInnerHTML={{
-                  __html: enhanced.after_pretty.replace(/```json|```/g, ""),
-                }}
-              ></pre>
-              <span className="absolute top-2 right-3 text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                Click to copy
-              </span>
-              {copiedEnhanced && (
-                <span className="absolute bottom-2 right-3 text-xs text-green-600 font-medium">
-                  ✓ Copied!
-                </span>
-              )}
-            </div>
-
-            <div className="mt-4">
-              <h3 className="text-sm font-semibold text-gray-700 uppercase mb-2">
-                Why It's Improved
-              </h3>
-              <p className="text-gray-600 leading-relaxed">{enhanced.why}</p>
-            </div>
-          </section>
-        )}
-      </div>
-    )}
-
-    {/* Footer */}
-    <footer className="text-center mt-16 mb-4 text-gray-500 text-sm">
-      <p>
-        Powered by OpenAI • © 2025 Promptodactyl by{" "}
-        <a
-          href="https://stratagentic.ai"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-600 hover:text-blue-700 transition-colors"
-        >
-          stratagentic.ai
-        </a>{" "}
-        🇳🇴
-      </p>
-    </footer>
-
-    {/* Divider + Privacy */}
-    <div className="w-full max-w-2xl mx-auto border-t border-gray-200 mt-8 mb-6"></div>
-    <section className="mt-4 mb-8 text-center max-w-2xl text-xs text-gray-400 leading-relaxed px-4">
-      <p>
-        Your inputs and generated prompts are processed securely through OpenAI’s API.
-        Promptodactyl does not store, track, or share any user content.  
-        For more information, review{" "}
-        <a
-          href="https://openai.com/privacy"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-500 hover:text-blue-600 underline"
-        >
-          OpenAI’s Privacy Policy
-        </a>{" "}
-        or contact{" "}
-        <a
-          href="mailto:privacy@stratagentic.ai"
-          className="text-blue-500 hover:text-blue-600 underline"
-        >
-          privacy@stratagentic.ai
-        </a>.
-      </p>
-      <p className="mt-1 italic">Last updated: November 2025</p>
-    </section>
-  </main>
-);
+            stratagentic.ai
+          </a>
+          {" "}🇳🇴
+        </p>
+      </footer>
+    </main>
+  );
+}
