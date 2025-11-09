@@ -109,55 +109,75 @@ async def health_check():
 async def refine_prompt(data: Prompt):
     """
     Refine a user prompt into a high-quality, production-ready prompt.
-    
-    Args:
-        data: Prompt object containing the text to refine
-        
-    Returns:
-        Dict with before, after, why, and category fields
+    Adds adaptive context cues (persona, structure, tone) without over-assuming intent.
     """
     try:
         logger.info(f"Refining prompt of length: {len(data.text)}")
 
+        # --- Intelligent prompt logic ---
         system_prompt = """
-You are an expert prompt engineer specializing in transforming user inputs into high-quality, production-ready prompts optimized for large language models (LLMs).
-Return valid JSON only with: before, after, why.
+You are an expert prompt engineer who improves user instructions for optimal LLM performance.
+Your goal is to make prompts clear, actionable, and contextually aware — not verbose.
+
+PROCESS:
+1. Detect the likely task type (e.g., explain, write, design, analyze, summarize, create).
+2. Identify implicit context — audience, format, tone, or goal.
+3. Improve the prompt by:
+   - Adding a concise role/persona if it improves accuracy or clarity.
+   - Outlining structure only when the task implies it (e.g., presentations, reports, analyses).
+   - Keeping all original intent and factual constraints intact.
+   - Avoiding arbitrary limits, numbers, or assumptions.
+4. Return valid JSON only with keys:
+   { "before": "...", "after": "...", "why": "..." }
+
+STYLE GUIDELINES:
+- Be practical, concise, and professional.
+- Avoid creative exaggeration or fictionalizing context.
+- Focus on clarity, structure, and usability.
 """
 
+        # --- Domain/context classification ---
         lower_text = data.text.lower()
-        if "marketing" in lower_text:
+        if any(k in lower_text for k in ["marketing", "campaign", "ad", "sales", "brand"]):
             category = "marketing"
-            context_hint = "Marketing or communication prompt. Focus on tone, conversion, and measurable outcomes."
-        elif "strategy" in lower_text or "business" in lower_text:
+            context_hint = "This appears to be a marketing or communication prompt. Emphasize audience alignment, tone, and measurable goals."
+        elif any(k in lower_text for k in ["strategy", "business", "plan", "growth", "market"]):
             category = "business"
-            context_hint = "Business or strategy prompt. Focus on clarity, structure, and actionable insights."
-        elif "code" in lower_text or "api" in lower_text or "function" in lower_text:
+            context_hint = "This appears to relate to business or strategy. Focus on clarity, structure, and actionable insight."
+        elif any(k in lower_text for k in ["code", "api", "function", "script", "python", "javascript"]):
             category = "code"
-            context_hint = "Technical prompt. Focus on precision, language, and implementation clarity."
-        elif "design" in lower_text or "visual" in lower_text:
+            context_hint = "This appears to be a technical prompt. Emphasize clarity, input/output structure, and precision."
+        elif any(k in lower_text for k in ["design", "visual", "aesthetic", "ui", "ux"]):
             category = "design"
-            context_hint = "Design or creative prompt. Focus on aesthetic direction and stylistic clarity."
-        elif "teach" in lower_text or "learn" in lower_text:
+            context_hint = "This appears to involve design or visual work. Focus on clarity of purpose and creative direction."
+        elif any(k in lower_text for k in ["teach", "learn", "explain", "course", "lesson"]):
             category = "education"
-            context_hint = "Educational prompt. Focus on clarity, examples, and depth."
+            context_hint = "This appears to involve teaching or explanation. Emphasize clarity, sequencing, and accessibility."
+        elif any(k in lower_text for k in ["presentation", "slides", "deck", "talk"]):
+            category = "presentation"
+            context_hint = "This appears to be a presentation-related prompt. Suggest a logical slide or section structure and audience framing."
         else:
             category = "general"
-            context_hint = "General prompt. Focus on purpose, structure, and readability."
+            context_hint = "General-purpose prompt. Improve readability, specify intent, and add minimal helpful context."
 
         user_prompt = f"""
 {context_hint}
 
-Refine and enhance the following prompt:
+Refine and enhance the following user prompt according to your process.
 
+Prompt:
 {data.text}
 
-Be concise, clear, and structured.
-Return valid JSON with 'before', 'after', and 'why'.
+Requirements:
+- Preserve the original meaning and goals.
+- Add structure or persona *only if it improves clarity or usability*.
+- Avoid arbitrary details (e.g., specific numbers or constraints) unless logically implied.
+- Return valid JSON with 'before', 'after', and 'why'.
 """
 
         response = client.chat.completions.create(
             model=MODEL_NAME,
-            temperature=0.4,
+            temperature=0.45,
             timeout=API_TIMEOUT,
             response_format={"type": "json_object"},
             messages=[
@@ -166,26 +186,22 @@ Return valid JSON with 'before', 'after', and 'why'.
             ],
         )
 
-        # Log token usage for cost monitoring
+        # --- Logging + response handling ---
         if hasattr(response, 'usage') and response.usage:
             logger.info(f"Token usage - Prompt: {response.usage.prompt_tokens}, "
-                       f"Completion: {response.usage.completion_tokens}, "
-                       f"Total: {response.usage.total_tokens}")
+                        f"Completion: {response.usage.completion_tokens}, "
+                        f"Total: {response.usage.total_tokens}")
 
         content = response.choices[0].message.content
         result = json.loads(content)
 
-        # Validate response structure
         required_keys = ["before", "after", "why"]
         if not all(k in result for k in required_keys):
-            logger.error(f"Missing required keys in AI response. Got: {result.keys()}")
-            raise ValueError("Invalid response structure from AI")
+            raise ValueError(f"Invalid AI response keys: {list(result.keys())}")
 
-        # Validate response content
         for key in required_keys:
             if not isinstance(result[key], str) or not result[key].strip():
-                logger.error(f"Invalid {key} field in AI response")
-                raise ValueError(f"Invalid {key} field in response")
+                raise ValueError(f"Empty or invalid {key} field in AI response")
 
         return {
             "before": safe_text(result["before"]).strip(),
@@ -197,12 +213,10 @@ Return valid JSON with 'before', 'after', and 'why'.
     except json.JSONDecodeError as e:
         logger.error(f"JSON decode error: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to parse AI response")
-    except ValueError as e:
-        logger.error(f"Validation error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Invalid AI response format")
     except Exception as e:
         logger.error(f"Refinement error: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail="An error occurred during refinement")
+        raise HTTPException(status_code=500, detail="Refinement failed")
+
 
 
 # --- Enhancement Endpoint ---
@@ -210,36 +224,79 @@ Return valid JSON with 'before', 'after', and 'why'.
 async def enhance_prompt(data: EnhanceRequest):
     """
     Enhance a refined prompt with additional context.
-    
-    Args:
-        data: EnhanceRequest object with refined prompt and context
-        
-    Returns:
-        Dict with before, after, and why fields
+    Adds tone, depth, and purpose alignment based on user inputs and inferred domain.
     """
     try:
         logger.info(f"Enhancing prompt of length: {len(data.refined)}")
 
+        # --- Adaptive enhancement logic ---
         system_prompt = """
 You are an expert-level Prompt Architect.
-Transform a refined prompt into a contextually enhanced version based on audience, outcome, and constraints.
-Return valid JSON only with: before, after, why.
+Your task is to take an already refined prompt and elevate it by aligning
+it precisely to the provided audience, desired outcome, and constraints.
+
+PROCESS:
+1. Analyze the refined prompt and infer its domain (technical, business, marketing, educational, presentation, creative, etc.).
+2. Interpret context:
+   - AUDIENCE → adjust tone, formality, and language complexity.
+   - OUTCOME → tailor structure, reasoning depth, or format to achieve it.
+   - CONSTRAINTS → apply limits or stylistic guidance faithfully.
+3. Enhance with purpose:
+   - Preserve structure and clarity of the refined prompt.
+   - Insert contextual cues (role, tone, objective) naturally.
+   - Strengthen clarity, alignment, and domain accuracy.
+4. Keep it lean and pragmatic — do not add decorative filler.
+5. Return valid JSON only with:
+   {
+     "before": "...",
+     "after": "...",
+     "why": "..."
+   }
+
+STYLE GUIDELINES:
+- Prefer professional, task-oriented phrasing.
+- Do not over-specify slide counts, word limits, or arbitrary numbers.
+- Reflect real-world expertise appropriate to the inferred domain.
 """
+
+        # --- Category-sensitive hinting ---
+        hint = ""
+        lowered = data.refined.lower()
+        if any(k in lowered for k in ["presentation", "slides", "deck"]):
+            hint = "The prompt involves a presentation. Ensure logical flow and audience engagement."
+        elif any(k in lowered for k in ["code", "api", "function", "script"]):
+            hint = "The prompt is technical. Ensure clarity, precision, and explicit inputs/outputs."
+        elif any(k in lowered for k in ["marketing", "campaign", "ad", "sales"]):
+            hint = "The prompt is marketing-focused. Optimize for persuasion, tone, and measurable outcomes."
+        elif any(k in lowered for k in ["teach", "lesson", "course", "students"]):
+            hint = "The prompt is educational. Emphasize clarity, structure, and learning goals."
+        elif any(k in lowered for k in ["design", "visual", "style", "aesthetic"]):
+            hint = "The prompt is design-related. Align tone with creativity and clarity of direction."
+        elif any(k in lowered for k in ["strategy", "plan", "business", "analysis"]):
+            hint = "The prompt is strategic. Focus on clarity, structure, and decision-oriented reasoning."
+        else:
+            hint = "General-purpose prompt. Prioritize clarity, context, and actionable structure."
 
         user_prompt = f"""
 Refined prompt:
 {data.refined}
 
-Audience: {data.audience or "not specified"}
-Desired outcome: {data.outcome or "not specified"}
-Constraints: {data.constraints or "none"}
+Context:
+- Audience: {data.audience or "not specified"}
+- Desired outcome: {data.outcome or "not specified"}
+- Constraints: {data.constraints or "none"}
 
-Enhance the tone, focus, and clarity to suit this exact situation.
+Additional hint: {hint}
+
+Enhance this refined prompt by aligning it to the audience, outcome, and constraints.
+Maintain structure but make it sound tailored, purposeful, and professional.
+Return valid JSON with 'before', 'after', and 'why'.
 """
 
+        # --- OpenAI call ---
         response = client.chat.completions.create(
             model=MODEL_NAME,
-            temperature=0.6,
+            temperature=0.55,
             timeout=API_TIMEOUT,
             response_format={"type": "json_object"},
             messages=[
@@ -248,26 +305,21 @@ Enhance the tone, focus, and clarity to suit this exact situation.
             ],
         )
 
-        # Log token usage for cost monitoring
         if hasattr(response, 'usage') and response.usage:
             logger.info(f"Token usage - Prompt: {response.usage.prompt_tokens}, "
-                       f"Completion: {response.usage.completion_tokens}, "
-                       f"Total: {response.usage.total_tokens}")
+                        f"Completion: {response.usage.completion_tokens}, "
+                        f"Total: {response.usage.total_tokens}")
 
         content = response.choices[0].message.content
         result = json.loads(content)
 
-        # Validate response structure
         required_keys = ["before", "after", "why"]
         if not all(k in result for k in required_keys):
-            logger.error(f"Missing required keys in AI response. Got: {result.keys()}")
-            raise ValueError("Invalid response structure from AI")
+            raise ValueError(f"Invalid AI response keys: {list(result.keys())}")
 
-        # Validate response content
         for key in required_keys:
             if not isinstance(result[key], str) or not result[key].strip():
-                logger.error(f"Invalid {key} field in AI response")
-                raise ValueError(f"Invalid {key} field in response")
+                raise ValueError(f"Empty or invalid {key} field in AI response")
 
         return {
             "before": safe_text(result["before"]).strip(),
@@ -278,12 +330,9 @@ Enhance the tone, focus, and clarity to suit this exact situation.
     except json.JSONDecodeError as e:
         logger.error(f"JSON decode error: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to parse AI response")
-    except ValueError as e:
-        logger.error(f"Validation error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Invalid AI response format")
     except Exception as e:
         logger.error(f"Enhancement error: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail="An error occurred during enhancement")
+        raise HTTPException(status_code=500, detail="Enhancement failed")
 
 
 # --- Local Run ---
