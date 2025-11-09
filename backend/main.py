@@ -111,11 +111,11 @@ async def refine_prompt(data: Prompt):
     Refine a user prompt into a high-quality, production-ready prompt.
     Adds adaptive context cues (persona, structure, tone) without over-assuming intent.
     """
-    try:
-        logger.info(f"Refining prompt of length: {len(data.text)}")
+   try:
+    logger.info(f"Refining prompt of length: {len(data.text)}")
 
-        # --- Intelligent prompt logic ---
-        system_prompt = """
+    # --- Intelligent prompt logic ---
+    system_prompt = """
 You are an expert prompt engineer and communication designer.
 Your job is to transform a user's rough or incomplete input into a polished,
 contextually aware, and *visibly improved* prompt that delivers superior results
@@ -144,7 +144,8 @@ STYLE GUIDELINES:
 - Write as if you are preparing the perfect prompt for a consultant, teacher, designer, or researcher.
 - Show *visible improvement* from before → after. The user must immediately see the added clarity and completeness.
 - Make the “why” field educational — briefly explain what you improved and why it matters.
-"""
+"""  
+
 
 
     # --- Domain/context classification ---
