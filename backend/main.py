@@ -36,6 +36,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# --- Utility Function ---
+def safe_text(value):
+    """Ensure AI output fields are always clean strings."""
+    if isinstance(value, dict):
+        return json.dumps(value, ensure_ascii=False)
+    if isinstance(value, list):
+        return " ".join(str(v) for v in value)
+    return str(value)
+
+
 # --- Data Model ---
 class Prompt(BaseModel):
     text: str
@@ -49,14 +60,17 @@ class Prompt(BaseModel):
             raise ValueError("Prompt must be less than 2000 characters")
         return v
 
+
 # --- Root Routes ---
 @app.get("/")
 async def root():
-    return {"service": "Promptodactyl API", "status": "running", "version": "1.0.1"}
+    return {"service": "Promptodactyl API", "status": "running", "version": "1.0.2"}
+
 
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
 
 # --- Core Refinement Endpoint ---
 @app.post("/refine")
@@ -114,44 +128,25 @@ Return only valid JSON in the defined format.
         if not all(k in result for k in ["before", "after", "why"]):
             raise ValueError("Invalid response structure from AI")
 
-        # --- Create Formatted Versions ---
-        formatted_markdown = f"""
-### Original Prompt
-{result["before"]}
-
-### Optimized Prompt
-{result["after"]}
-
-### Why It’s Better
-{result["why"]}
-""".strip()
-
         formatted_html = f"""
 <div style='font-family:monospace;background:#0b0d10;color:#eaeaea;padding:20px;border-radius:10px;'>
   <h3 style='color:#5da8ff;'>Original Prompt</h3>
-  <pre style='white-space:pre-wrap;background:#121417;padding:10px;border-radius:6px;'>{result["before"]}</pre>
+  <pre style='white-space:pre-wrap;background:#121417;padding:10px;border-radius:6px;'>{safe_text(result["before"])}</pre>
 
   <h3 style='color:#5da8ff;'>Optimized Prompt</h3>
-  <pre style='white-space:pre-wrap;background:#121417;padding:10px;border-radius:6px;'>{result["after"]}</pre>
+  <pre style='white-space:pre-wrap;background:#121417;padding:10px;border-radius:6px;'>{safe_text(result["after"])}</pre>
 
   <h3 style='color:#5da8ff;'>Why It’s Better</h3>
-  <p style='color:#bfc5ce;font-size:0.95rem;line-height:1.5;'>{result["why"]}</p>
+  <p style='color:#bfc5ce;font-size:0.95rem;line-height:1.5;'>{safe_text(result["why"])}</p>
 </div>
 """.strip()
 
-        # --- Final Structured Response ---
-        final_response = {
-            "before": result["before"].strip(),
-            "after": result["after"].strip(),
-            "why": result["why"].strip(),
-            "formatted": {
-                "markdown": formatted_markdown,
-                "html": formatted_html,
-            },
+        return {
+            "before": safe_text(result["before"]).strip(),
+            "after": safe_text(result["after"]).strip(),
+            "why": safe_text(result["why"]).strip(),
+            "formatted": {"html": formatted_html},
         }
-
-        logger.info("Refinement successful")
-        return final_response
 
     except json.JSONDecodeError as e:
         logger.error(f"JSON decode error: {e}")
@@ -160,12 +155,13 @@ Return only valid JSON in the defined format.
         logger.error(f"Refinement error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Refinement failed: {str(e)}")
 
-# --- Enhancement Endpoint (Second-Stage Refinement) ---
+
+# --- Enhanced Context-Aware Enhancement Endpoint ---
 @app.post("/enhance")
 async def enhance_prompt(data: dict):
     """
-    Accepts a refined prompt and optional context details for deeper optimization.
-    Expected keys: 'refined', 'outcome', 'audience', 'constraints'
+    Deepens contextual customization of an already refined prompt.
+    Keys: 'refined', 'outcome', 'audience', 'constraints'
     """
     try:
         base_prompt = data.get("refined", "")
@@ -175,25 +171,24 @@ async def enhance_prompt(data: dict):
 
         logger.info("Enhancing refined prompt with contextual intelligence")
 
-        # --- Advanced Contextual System Prompt ---
         system_prompt = """
 You are an expert-level Prompt Architect.
 Your mission is to transform a refined prompt into an elite, context-optimized version
 using specific real-world parameters provided by the user (audience, outcome, constraints).
 
 Follow this process:
-1. **Interpret Context:**
+1. Interpret Context:
    - Analyze audience type (executives, developers, marketers, students, etc.) and adjust vocabulary, tone, and depth accordingly.
    - Align with desired outcome (insight, decision, explanation, content generation, analysis, etc.) and optimize for that goal.
    - Apply constraints precisely — e.g., brevity, tone, formality, style, or domain limits.
 
-2. **Enhance with Purpose:**
+2. Enhance with Purpose:
    - Retain logical structure and clarity from the refined version.
    - Integrate the provided audience, outcome, and constraints naturally within the wording.
    - Strengthen reasoning depth, contextual precision, and usability.
    - Make the prompt sound purpose-built for this exact use case.
 
-3. **Balance and Style:**
+3. Balance and Style:
    - Be assertive in your transformation but preserve the core intent.
    - Prefer concise, high-performance wording over verbosity.
    - You may restructure or reframe slightly if it increases clarity or alignment.
@@ -213,7 +208,6 @@ Return valid JSON only with:
 }
 """
 
-        # --- Context-Aware User Prompt ---
         user_prompt = f"""
 You are enhancing a refined prompt. Integrate and adapt it based on the following context.
 
@@ -234,10 +228,9 @@ Guidelines:
 - Do not add commentary or meta text — return valid JSON only.
 """
 
-        # --- OpenAI Call ---
         response = client.chat.completions.create(
             model="gpt-4o-mini",
-            temperature=0.6,  # slightly higher for creativity and contextual nuance
+            temperature=0.6,
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -251,11 +244,10 @@ Guidelines:
         if not all(k in result for k in ["before", "after", "why"]):
             raise ValueError("Invalid response structure from AI")
 
-        logger.info("Contextual enhancement successful")
         return {
-            "before": result["before"].strip(),
-            "after": result["after"].strip(),
-            "why": result["why"].strip(),
+            "before": safe_text(result["before"]).strip(),
+            "after": safe_text(result["after"]).strip(),
+            "why": safe_text(result["why"]).strip(),
         }
 
     except json.JSONDecodeError as e:
@@ -265,7 +257,8 @@ Guidelines:
         logger.error(f"Enhancement error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Enhancement failed: {str(e)}")
 
-# --- Local Run ---
+
+# --- Run Locally ---
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
