@@ -27,6 +27,16 @@ export default function App() {
   
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
+  // --- Strip Markdown Formatting ---
+  const stripMarkdown = (text) => {
+    if (!text) return "";
+    return text
+      .replace(/\*\*(.+?)\*\*/g, '$1')  // Remove bold **text**
+      .replace(/\*(.+?)\*/g, '$1')      // Remove italic *text*
+      .replace(/#{1,6}\s?(.+)/g, '$1')  // Remove headers
+      .replace(/`(.+?)`/g, '$1');       // Remove code blocks
+  };
+
   // --- Placeholder Logic ---
   const getEnhancePlaceholders = (context) => {
     const lower = context.toLowerCase();
@@ -272,7 +282,7 @@ export default function App() {
               onClick={handleCopy}
             >
               <p className="text-gray-800 whitespace-pre-wrap leading-relaxed select-text">
-                {res.after}
+                {stripMarkdown(res.after)}
               </p>
             </div>
             
@@ -280,7 +290,7 @@ export default function App() {
               <h3 className="text-sm font-semibold text-gray-700 uppercase mb-2">
                 Why It's Better
               </h3>
-              <p className="text-gray-600 leading-relaxed">{res.why}</p>
+              <p className="text-gray-600 leading-relaxed">{stripMarkdown(res.why)}</p>
             </div>
           </section>
 
@@ -369,7 +379,7 @@ export default function App() {
                 onClick={handleCopyEnhanced}
               >
                 <p className="text-gray-800 whitespace-pre-wrap leading-relaxed select-text">
-                  {enhanced.after}
+                  {stripMarkdown(enhanced.after)}
                 </p>
               </div>
               
@@ -377,7 +387,7 @@ export default function App() {
                 <h3 className="text-sm font-semibold text-gray-700 uppercase mb-2">
                   Why It's Improved
                 </h3>
-                <p className="text-gray-600 leading-relaxed">{enhanced.why}</p>
+                <p className="text-gray-600 leading-relaxed">{stripMarkdown(enhanced.why)}</p>
               </div>
             </section>
           )}
