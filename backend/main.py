@@ -10,6 +10,10 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# --- Configuration ---
+MODEL_NAME = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+API_TIMEOUT = float(os.getenv("OPENAI_TIMEOUT", "30.0"))
+
 # --- OpenAI Client ---
 client = OpenAI()
 
@@ -36,8 +40,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# --- Startup Event ---
+@app.on_event("startup")
+async def startup_event():
+    """Validate required environment variables on startup"""
+    if not os.getenv("OPENAI_API_KEY"):
+        logger.warning("OPENAI_API_KEY not found in environment variables")
+    logger.info(f"Using model: {MODEL_NAME}")
+    logger.info(f"API timeout set to: {API_TIMEOUT}s")
+
+
 # --- Utility ---
 def safe_text(value):
+    """Convert various types to safe text strings"""
     if isinstance(value, dict):
         return json.dumps(value, ensure_ascii=False)
     if isinstance(value, list):
@@ -45,8 +61,9 @@ def safe_text(value):
     return str(value)
 
 
-# --- Data Model ---
+# --- Data Models ---
 class Prompt(BaseModel):
+    """Request model for prompt refinement"""
     text: str
 
     @validator("text")
@@ -59,20 +76,46 @@ class Prompt(BaseModel):
         return v
 
 
+class EnhanceRequest(BaseModel):
+    """Request model for prompt enhancement"""
+    refined: str
+    outcome: str = ""
+    audience: str = ""
+    constraints: str = ""
+
+    @validator("refined")
+    def validate_refined(cls, v):
+        v = v.strip()
+        if len(v) < 10:
+            raise ValueError("Refined prompt must be at least 10 characters")
+        return v
+
+
 # --- Root Routes ---
 @app.get("/")
 async def root():
+    """API root endpoint with service information"""
     return {"service": "Promptodactyl API", "status": "running", "version": "1.1.0"}
 
 
 @app.get("/health")
 async def health_check():
+    """Health check endpoint"""
     return {"status": "healthy"}
 
 
 # --- Core Refinement Endpoint ---
 @app.post("/refine")
 async def refine_prompt(data: Prompt):
+    """
+    Refine a user prompt into a high-quality, production-ready prompt.
+    
+    Args:
+        data: Prompt object containing the text to refine
+        
+    Returns:
+        Dict with before, after, why, and category fields
+    """
     try:
         logger.info(f"Refining prompt of length: {len(data.text)}")
 
@@ -113,8 +156,9 @@ Return valid JSON with 'before', 'after', and 'why'.
 """
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=MODEL_NAME,
             temperature=0.4,
+            timeout=API_TIMEOUT,
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -122,11 +166,26 @@ Return valid JSON with 'before', 'after', and 'why'.
             ],
         )
 
+        # Log token usage for cost monitoring
+        if hasattr(response, 'usage') and response.usage:
+            logger.info(f"Token usage - Prompt: {response.usage.prompt_tokens}, "
+                       f"Completion: {response.usage.completion_tokens}, "
+                       f"Total: {response.usage.total_tokens}")
+
         content = response.choices[0].message.content
         result = json.loads(content)
 
-        if not all(k in result for k in ["before", "after", "why"]):
+        # Validate response structure
+        required_keys = ["before", "after", "why"]
+        if not all(k in result for k in required_keys):
+            logger.error(f"Missing required keys in AI response. Got: {result.keys()}")
             raise ValueError("Invalid response structure from AI")
+
+        # Validate response content
+        for key in required_keys:
+            if not isinstance(result[key], str) or not result[key].strip():
+                logger.error(f"Invalid {key} field in AI response")
+                raise ValueError(f"Invalid {key} field in response")
 
         return {
             "before": safe_text(result["before"]).strip(),
@@ -135,21 +194,31 @@ Return valid JSON with 'before', 'after', and 'why'.
             "category": category,
         }
 
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to parse AI response")
+    except ValueError as e:
+        logger.error(f"Validation error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Invalid AI response format")
     except Exception as e:
-        logger.error(f"Refinement error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Refinement failed: {str(e)}")
+        logger.error(f"Refinement error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An error occurred during refinement")
 
 
 # --- Enhancement Endpoint ---
 @app.post("/enhance")
-async def enhance_prompt(data: dict):
+async def enhance_prompt(data: EnhanceRequest):
+    """
+    Enhance a refined prompt with additional context.
+    
+    Args:
+        data: EnhanceRequest object with refined prompt and context
+        
+    Returns:
+        Dict with before, after, and why fields
+    """
     try:
-        base_prompt = data.get("refined", "")
-        outcome = data.get("outcome", "")
-        audience = data.get("audience", "")
-        constraints = data.get("constraints", "")
+        logger.info(f"Enhancing prompt of length: {len(data.refined)}")
 
         system_prompt = """
 You are an expert-level Prompt Architect.
@@ -159,18 +228,19 @@ Return valid JSON only with: before, after, why.
 
         user_prompt = f"""
 Refined prompt:
-{base_prompt}
+{data.refined}
 
-Audience: {audience or "not specified"}
-Desired outcome: {outcome or "not specified"}
-Constraints: {constraints or "none"}
+Audience: {data.audience or "not specified"}
+Desired outcome: {data.outcome or "not specified"}
+Constraints: {data.constraints or "none"}
 
 Enhance the tone, focus, and clarity to suit this exact situation.
 """
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=MODEL_NAME,
             temperature=0.6,
+            timeout=API_TIMEOUT,
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -178,11 +248,26 @@ Enhance the tone, focus, and clarity to suit this exact situation.
             ],
         )
 
+        # Log token usage for cost monitoring
+        if hasattr(response, 'usage') and response.usage:
+            logger.info(f"Token usage - Prompt: {response.usage.prompt_tokens}, "
+                       f"Completion: {response.usage.completion_tokens}, "
+                       f"Total: {response.usage.total_tokens}")
+
         content = response.choices[0].message.content
         result = json.loads(content)
 
-        if not all(k in result for k in ["before", "after", "why"]):
+        # Validate response structure
+        required_keys = ["before", "after", "why"]
+        if not all(k in result for k in required_keys):
+            logger.error(f"Missing required keys in AI response. Got: {result.keys()}")
             raise ValueError("Invalid response structure from AI")
+
+        # Validate response content
+        for key in required_keys:
+            if not isinstance(result[key], str) or not result[key].strip():
+                logger.error(f"Invalid {key} field in AI response")
+                raise ValueError(f"Invalid {key} field in response")
 
         return {
             "before": safe_text(result["before"]).strip(),
@@ -190,11 +275,15 @@ Enhance the tone, focus, and clarity to suit this exact situation.
             "why": safe_text(result["why"]).strip(),
         }
 
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to parse AI response")
+    except ValueError as e:
+        logger.error(f"Validation error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Invalid AI response format")
     except Exception as e:
-        logger.error(f"Enhancement error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Enhancement failed: {str(e)}")
+        logger.error(f"Enhancement error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An error occurred during enhancement")
 
 
 # --- Local Run ---
