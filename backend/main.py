@@ -116,63 +116,81 @@ async def refine_prompt(data: Prompt):
 
         # --- Intelligent prompt logic ---
         system_prompt = """
-You are an expert prompt engineer who improves user instructions for optimal LLM performance.
-Your goal is to make prompts clear, actionable, and contextually aware — not verbose.
+system_prompt = """
+You are an expert prompt engineer and communication designer.
+Your job is to transform a user's rough or incomplete input into a polished,
+contextually aware, and *visibly improved* prompt that delivers superior results
+when used with large language models (LLMs).
+
+Your output must clearly show improvement in:
+- Clarity: remove ambiguity and vague phrasing.
+- Purpose: define what the model should achieve.
+- Structure: include sections or steps if they clarify the task.
+- Context: add a relevant persona, audience, or tone when it enhances quality.
+- Richness: make the refined version look confidently professional.
 
 PROCESS:
-1. Detect the likely task type (e.g., explain, write, design, analyze, summarize, create).
-2. Identify implicit context — audience, format, tone, or goal.
-3. Improve the prompt by:
-   - Adding a concise role/persona if it improves accuracy or clarity.
-   - Outlining structure only when the task implies it (e.g., presentations, reports, analyses).
-   - Keeping all original intent and factual constraints intact.
-   - Avoiding arbitrary limits, numbers, or assumptions.
-4. Return valid JSON only with keys:
-   { "before": "...", "after": "...", "why": "..." }
+1. Detect what the user is trying to do (e.g., write, explain, create, analyze, present, plan).
+2. Add structure or role cues that make the prompt instantly ready for execution.
+3. Never invent facts or specific numeric constraints (e.g., “10 slides”) unless the user implies them.
+4. Keep sentences natural and direct.
+5. Return valid JSON only with:
+   {
+     "before": "...",
+     "after": "...",
+     "why": "..."
+   }
 
 STYLE GUIDELINES:
-- Be practical, concise, and professional.
-- Avoid creative exaggeration or fictionalizing context.
-- Focus on clarity, structure, and usability.
+- Write as if you are preparing the perfect prompt for a consultant, teacher, designer, or researcher.
+- Show *visible improvement* from before → after. The user must immediately see the added clarity and completeness.
+- Make the “why” field educational — briefly explain what you improved and why it matters.
 """
 
-        # --- Domain/context classification ---
-        lower_text = data.text.lower()
-        if any(k in lower_text for k in ["marketing", "campaign", "ad", "sales", "brand"]):
-            category = "marketing"
-            context_hint = "This appears to be a marketing or communication prompt. Emphasize audience alignment, tone, and measurable goals."
-        elif any(k in lower_text for k in ["strategy", "business", "plan", "growth", "market"]):
-            category = "business"
-            context_hint = "This appears to relate to business or strategy. Focus on clarity, structure, and actionable insight."
-        elif any(k in lower_text for k in ["code", "api", "function", "script", "python", "javascript"]):
-            category = "code"
-            context_hint = "This appears to be a technical prompt. Emphasize clarity, input/output structure, and precision."
-        elif any(k in lower_text for k in ["design", "visual", "aesthetic", "ui", "ux"]):
-            category = "design"
-            context_hint = "This appears to involve design or visual work. Focus on clarity of purpose and creative direction."
-        elif any(k in lower_text for k in ["teach", "learn", "explain", "course", "lesson"]):
-            category = "education"
-            context_hint = "This appears to involve teaching or explanation. Emphasize clarity, sequencing, and accessibility."
-        elif any(k in lower_text for k in ["presentation", "slides", "deck", "talk"]):
-            category = "presentation"
-            context_hint = "This appears to be a presentation-related prompt. Suggest a logical slide or section structure and audience framing."
-        else:
-            category = "general"
-            context_hint = "General-purpose prompt. Improve readability, specify intent, and add minimal helpful context."
 
-        user_prompt = f"""
+    # --- Domain/context classification ---
+lower_text = data.text.lower()
+if "marketing" in lower_text:
+    category = "marketing"
+    context_hint = "Marketing or communication prompt. Focus on tone, conversion, and measurable outcomes."
+elif "strategy" in lower_text or "business" in lower_text:
+    category = "business"
+    context_hint = "Business or strategy prompt. Focus on clarity, structure, and actionable insights."
+elif "code" in lower_text or "api" in lower_text or "function" in lower_text:
+    category = "code"
+    context_hint = "Technical prompt. Focus on precision, language, and implementation clarity."
+elif "design" in lower_text or "visual" in lower_text:
+    category = "design"
+    context_hint = "Design or creative prompt. Focus on aesthetic direction and stylistic clarity."
+elif "teach" in lower_text or "learn" in lower_text:
+    category = "education"
+    context_hint = "Educational prompt. Focus on clarity, examples, and depth."
+elif "presentation" in lower_text or "slides" in lower_text or "deck" in lower_text:
+    category = "presentation"
+    context_hint = "Presentation-related prompt. Focus on logical flow, sections, and audience engagement."
+else:
+    category = "general"
+    context_hint = "General prompt. Focus on purpose, structure, and readability."
+
+# --- UX improvement hint ---
+context_hint = f"""
 {context_hint}
 
-Refine and enhance the following user prompt according to your process.
+Show a visibly improved version of the user's input. 
+Make the difference clear and educational — demonstrate how structure, tone, and specificity 
+can turn a vague prompt into a professional, ready-to-run one.
+"""
 
-Prompt:
+# --- Construct model prompt ---
+user_prompt = f"""
+{context_hint}
+
+User input:
 {data.text}
 
-Requirements:
-- Preserve the original meaning and goals.
-- Add structure or persona *only if it improves clarity or usability*.
-- Avoid arbitrary details (e.g., specific numbers or constraints) unless logically implied.
-- Return valid JSON with 'before', 'after', and 'why'.
+Refine and enhance this into a visibly improved, production-ready prompt
+that preserves the user’s intent but adds clarity, role, structure, and tone.
+Return valid JSON with 'before', 'after', and 'why'.
 """
 
         response = client.chat.completions.create(
