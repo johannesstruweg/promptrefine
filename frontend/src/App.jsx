@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
+import PrivacyPolicy from "./Privacy_policy";
 
 export default function App() {
   const [text, setText] = useState("");
@@ -406,21 +407,31 @@ export default function App() {
         </div>
       )}
 
-      {/* Footer */}
-      <footer className="text-center mt-16 mb-4 text-gray-500 text-sm">
-        <p>
-          Powered by OpenAI • © 2025 Promptodactyl by{" "}
-          <a 
-            href="https://stratagentic.ai" 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            className="text-blue-600 hover:text-blue-700 transition-colors"
-          >
-            stratagentic.ai
-          </a>
-          {" "}🇳🇴
-        </p>
-      </footer>
+      <footer className="text-center mt-16 mb-2 text-gray-500 text-sm relative z-10">
+  <p>
+    Powered by ChatGPT • © 2025 Promptodactyl by{" "}
+    <a
+      href="https://stratagentic.ai"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-blue-600 hover:text-blue-700 transition-colors"
+    >
+      stratagentic.ai
+    </a>{" "}
+    🇳🇴
+  </p>
+
+  <div className="mt-2">
+    <button
+      onClick={() => setShowPolicy(true)}
+      className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors"
+    >
+      Privacy Policy
+    </button>
+  </div>
+</footer>
+
+{showPolicy && <PrivacyPolicy onClose={() => setShowPolicy(false)} />}
     </main>
   );
 }
