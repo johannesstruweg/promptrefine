@@ -71,6 +71,7 @@ class EnhanceRequest(BaseModel):
     audience: str = ""
     constraints: str = ""
     improvement_notes: str = ""
+        context_questions: list[str] | None = None
 
 
 # --- Root Routes ---
