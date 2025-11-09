@@ -71,7 +71,7 @@ class EnhanceRequest(BaseModel):
     audience: str = ""
     constraints: str = ""
     improvement_notes: str = ""
-        context_questions: list[str] | None = None
+    context_questions: list[str] | None = None  # fixed indentation
 
 
 # --- Root Routes ---
@@ -85,7 +85,7 @@ async def health_check():
     return {"status": "healthy"}
 
 
-# --- Core Refinement Endpoint (with Dynamic Context Reflection) ---
+# --- Core Refinement Endpoint ---
 @app.post("/refine")
 async def refine_prompt(data: Prompt):
     try:
@@ -133,30 +133,19 @@ PROCESS
 MANDATORY STRUCTURE REQUIREMENTS
 Your refined prompt MUST be organized into distinct sections separated by double line breaks.
 
-Required structure pattern:
-[Opening context or role definition]
-
-[Main task or objective statement]
-
-[Specific requirements, constraints, or details]
-
-[Expected output format or deliverable]
-
 STYLE & PRESENTATION RULES
 - Write as though you're refining prompts for a senior consultant, strategist, or researcher.
 - Use professional, task-oriented phrasing — confident, not verbose.
 - Always separate sections with blank lines to create visual breathing room.
 - Keep improvements functional and context-driven, not decorative.
-- Avoid arbitrary limits unless explicitly stated.
-- Reflect real-world expertise in the inferred domain (e.g., business, tech, creative).
-- Ensure the "after" prompt feels ready for deployment — natural, intentional, and high-performing.
-- CRITICAL: Do NOT use markdown formatting symbols like asterisks, hashtags, or backticks in your output. Write in plain text only.
+- Reflect real-world expertise in the inferred domain.
+- Do NOT use markdown formatting symbols like asterisks, hashtags, or backticks.
 
 OUTPUT FORMAT
 Return valid JSON with exactly these three fields:
-- "before": the original prompt as a simple string
-- "after": the refined prompt in plain text without any markdown, asterisks, or special formatting, MUST include section breaks (double line breaks)
-- "why": brief explanation of key improvements as a simple string
+- "before": the original prompt
+- "after": the refined prompt (plain text with double line breaks)
+- "why": short explanation of key improvements
 """
 
         user_prompt = f"""
@@ -179,18 +168,13 @@ Refine and improve this into a professional, structured, production-ready prompt
             ],
         )
 
-        content = response.choices[0].message.content
-        result = json.loads(content)
-        required_keys = ["before", "after", "why"]
-        if not all(k in result for k in required_keys):
-            raise ValueError("Missing keys in AI response")
+        result = json.loads(response.choices[0].message.content)
 
-        # --- Dynamic context reflection: infer next-step placeholder questions ---
+        # --- Dynamic context reflection ---
         try:
             reflection_prompt = f"""
 You are Promptodactyl's Context Mirror.
-Given the refined prompt and improvement notes below, infer what 3 short, natural follow-up questions would help clarify audience, outcome, or constraints.
-The questions must sound context-aware, not generic.
+Given the refined prompt and improvement notes, infer 3 short, natural follow-up questions that clarify audience, outcome, or constraints.
 
 Refined prompt:
 {result['after']}
@@ -198,10 +182,9 @@ Refined prompt:
 Improvement notes:
 {result['why']}
 
-Respond ONLY as valid JSON with:
+Respond ONLY as JSON:
 {{"questions": ["q1", "q2", "q3"]}}
 """
-
             reflection = client.chat.completions.create(
                 model=MODEL_NAME,
                 temperature=0.6,
@@ -209,16 +192,10 @@ Respond ONLY as valid JSON with:
                 response_format={"type": "json_object"},
                 messages=[{"role": "user", "content": reflection_prompt}],
             )
-
             dynamic_qs = json.loads(reflection.choices[0].message.content)["questions"]
-
         except Exception as sub_e:
             logger.warning(f"Context reflection failed: {str(sub_e)}")
-            dynamic_qs = [
-                "Who is this for?",
-                "What is the main purpose?",
-                "Any tone or format constraints?"
-            ]
+            dynamic_qs = ["Who is this for?", "What is the purpose?", "Any constraints?"]
 
         return {
             "before": safe_text(result["before"]).strip(),
@@ -233,12 +210,13 @@ Respond ONLY as valid JSON with:
         raise HTTPException(status_code=500, detail="Refinement failed")
 
 
-        # --- Core system instructions (unchanged from your version) ---
+# --- Enhancement Endpoint (separate route) ---
+@app.post("/enhance")
+async def enhance_prompt(data: EnhanceRequest):
+    try:
         system_prompt = f"""
 You are Promptodactyl, an expert-level Prompt Architect.
-Your mission is to take an already refined prompt and elevate it even further — aligning it precisely with the user's audience, desired outcome, and constraints.
-
-You must integrate the contextual insight from the previous refinement (improvement notes or inferred domain cues) and maintain all mandatory structure requirements described below.
+Your mission is to take an already refined prompt and elevate it further — aligning it precisely with the user's audience, desired outcome, and constraints.
 
 MANDATORY STRUCTURE REQUIREMENTS
 Your enhanced prompt MUST maintain or improve the sectioned structure:
@@ -250,28 +228,22 @@ Your enhanced prompt MUST maintain or improve the sectioned structure:
 
 [Delivery format or success criteria]
 
-STYLE & PRESENTATION RULES
-- Write as though you're refining prompts for a senior consultant, strategist, or researcher.
-- Use professional, task-oriented phrasing — confident, not verbose.
-- Always separate sections with blank lines to create visual breathing room.
-- Keep improvements functional and context-driven.
-- Reflect real-world expertise in the inferred domain.
-- CRITICAL: Do NOT use markdown formatting symbols like asterisks, hashtags, or backticks in your output.
+STYLE RULES
+- Write for a senior consultant or strategist.
+- Use confident, professional phrasing.
+- Keep structure clear with blank lines between sections.
+- Avoid markdown formatting or decorative filler.
 
 OUTPUT FORMAT
-Return valid JSON with exactly these three fields:
-- "before": the refined prompt you received as input
-- "after": the enhanced prompt (plain text, section breaks with \\n\\n)
-- "why": brief explanation of how you adapted the prompt to the audience, outcome, and constraints
+Return valid JSON with exactly:
+- "before": the refined prompt input
+- "after": the enhanced version (plain text with \\n\\n breaks)
+- "why": how you adapted it
 """
 
-              # --- Build enhancement context (using dynamic context questions if available) ---
         dynamic_qs = getattr(data, "context_questions", None)
-
         if dynamic_qs and isinstance(dynamic_qs, list) and len(dynamic_qs) >= 3:
-            inferred_audience = dynamic_qs[0]
-            inferred_outcome = dynamic_qs[1]
-            inferred_constraints = dynamic_qs[2]
+            inferred_audience, inferred_outcome, inferred_constraints = dynamic_qs[:3]
         else:
             inferred_audience = "Who is this for?"
             inferred_outcome = "What should this achieve?"
@@ -281,18 +253,16 @@ Return valid JSON with exactly these three fields:
 Refined prompt:
 {data.refined}
 
-Improvement notes from previous refinement:
+Improvement notes:
 {data.improvement_notes or "none provided"}
 
 Audience: {data.audience or inferred_audience}
 Desired outcome: {data.outcome or inferred_outcome}
 Constraints: {data.constraints or inferred_constraints}
 
-Enhance this prompt while preserving clarity, role precision, and structural consistency.
+Enhance this prompt while preserving clarity, precision, and structure.
 """
 
-
-        # --- Model call (unchanged) ---
         response = client.chat.completions.create(
             model=MODEL_NAME,
             temperature=0.55,
@@ -304,30 +274,16 @@ Enhance this prompt while preserving clarity, role precision, and structural con
             ],
         )
 
-        content = response.choices[0].message.content
-        result = json.loads(content)
-        required_keys = ["before", "after", "why"]
-        if not all(k in result for k in required_keys):
-            raise ValueError("Missing keys in AI response")
-
-        # --- Response mirrors first output more closely and returns placeholders ---
+        result = json.loads(response.choices[0].message.content)
         return {
             "before": safe_text(result["before"]).strip(),
             "after": safe_text(result["after"]).strip(),
             "why": safe_text(result["why"]).strip(),
-            "context_used": {
-                "domain": domain,
-                "audience": data.audience or placeholder_audience,
-                "outcome": data.outcome or placeholder_outcome,
-                "constraints": data.constraints or placeholder_constraints,
-                "improvement_notes": data.improvement_notes or "none provided",
-            },
         }
 
     except Exception as e:
         logger.error(f"Enhancement error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Enhancement failed")
-
 
 
 # --- Local Run ---
