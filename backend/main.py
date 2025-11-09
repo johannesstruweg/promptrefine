@@ -44,7 +44,6 @@ app.add_middleware(
 # --- Startup Event ---
 @app.on_event("startup")
 async def startup_event():
-    """Validate required environment variables on startup"""
     if not os.getenv("OPENAI_API_KEY"):
         logger.warning("OPENAI_API_KEY not found in environment variables")
     logger.info(f"Using model: {MODEL_NAME}")
@@ -53,7 +52,6 @@ async def startup_event():
 
 # --- Utility ---
 def safe_text(value):
-    """Convert various types to safe text strings"""
     if isinstance(value, dict):
         return json.dumps(value, ensure_ascii=False)
     if isinstance(value, list):
@@ -63,7 +61,6 @@ def safe_text(value):
 
 # --- Data Models ---
 class Prompt(BaseModel):
-    """Request model for prompt refinement"""
     text: str
 
     @validator("text")
@@ -77,11 +74,12 @@ class Prompt(BaseModel):
 
 
 class EnhanceRequest(BaseModel):
-    """Request model for prompt enhancement"""
     refined: str
     outcome: str = ""
     audience: str = ""
     constraints: str = ""
+    category: str = ""
+    hint: str = ""  # carries forward the hint from refinement phase
 
     @validator("refined")
     def validate_refined(cls, v):
@@ -91,10 +89,28 @@ class EnhanceRequest(BaseModel):
         return v
 
 
+# --- Category Hint Helper ---
+def get_category_hint(text: str, category: str = "") -> str:
+    t = text.lower()
+    if category == "marketing" or any(k in t for k in ["marketing", "campaign", "ad", "sales"]):
+        return "Marketing context. Focus on persuasion, tone, and measurable outcomes."
+    if category == "business" or any(k in t for k in ["strategy", "plan", "analysis", "business"]):
+        return "Strategic or business context. Emphasize clarity, structure, and actionable reasoning."
+    if category == "code" or any(k in t for k in ["code", "api", "function", "script"]):
+        return "Technical context. Ensure precision, input/output clarity, and concise logic."
+    if category == "design" or any(k in t for k in ["design", "visual", "style", "aesthetic"]):
+        return "Design context. Highlight creative direction, clarity, and intent."
+    if category == "education" or any(k in t for k in ["teach", "lesson", "students", "learn"]):
+        return "Educational context. Emphasize clarity, structure, and learning outcomes."
+    if category == "presentation" or any(k in t for k in ["presentation", "slides", "deck"]):
+        return "Presentation context. Focus on logical flow, engagement, and visual pacing."
+    return "General context. Prioritize clarity, relevance, and structural balance."
+
+
 # --- Root Routes ---
 @app.get("/")
 async def root():
-    return {"service": "Promptodactyl API", "status": "running", "version": "1.1.0"}
+    return {"service": "Promptodactyl API", "status": "running", "version": "1.3.0"}
 
 
 @app.get("/health")
@@ -105,97 +121,52 @@ async def health_check():
 # --- Core Refinement Endpoint ---
 @app.post("/refine")
 async def refine_prompt(data: Prompt):
-    """
-    Refine a user prompt into a high-quality, production-ready prompt.
-    Adds adaptive context cues (persona, structure, tone) without over-assuming intent.
-    """
     try:
         logger.info(f"Refining prompt of length: {len(data.text)}")
 
-        # --- Intelligent prompt logic ---
         system_prompt = """
-You are an expert Prompt Engineer and Communication Designer.
-Your mission is to transform a user’s rough or incomplete input into a refined, context-aware, and visibly superior prompt that looks and reads as if crafted by a professional.
+You are **Promptodactyl**, an expert Prompt Engineer and Communication Designer.
+Your mission is to transform any user’s rough, incomplete, or unclear input into a refined, context-aware, and visually superior prompt that demonstrates clarity, precision, and purpose.
 
-Your output should not only improve functionality but *look distinctly clearer* than any competing optimizer.  
-The user will often compare your result with another tool’s output—yours must demonstrate higher precision, structure, and polish.
-
----
-
-IMPROVEMENT GOALS
-- **Clarity:** Eliminate vague phrasing and redundant words. Make intent obvious.
-- **Purpose:** Define exactly what the model should achieve or deliver.
-- **Structure:** Present information cleanly with sections, roles, or steps if they clarify execution.
-- **Context:** Add helpful persona, tone, or audience cues when they enhance specificity.
-- **Professional Finish:** Make the refined version read like a ready-to-use production prompt, visually neat and authoritative.
-
----
-
-PROCESS
-1. Detect the user’s underlying intent (e.g., write, design, analyze, explain, plan, summarize).
-2. Identify missing context, structure, or objectives.
-3. Rewrite the prompt so it appears deliberate, confident, and immediately usable.
-4. Use natural, direct sentences—no fluff, no self-references.
-5. Do **not** invent facts, counts, or data unless implied.
-6. Return only valid JSON using this schema:
-
-{
-  "before": "Original user input",
-  "after": "Refined, structured, and visibly improved prompt ready for LLM use",
-  "why": "Educational explanation of the improvements and why this version performs better"
-}
-
----
-
-STYLE GUIDELINES
-- Write as though you are crafting the ideal prompt for a consultant, strategist, or researcher who values clarity and precision.
-- Make improvement *obvious at a glance* — layout, tone, and specificity should all signal professionalism.
-- Keep the “why” section short, factual, and confident: it should read like a brief design critique.
-- Every word in the “after” field must feel intentional and high-impact.
+Your refined output must not only function better but **look distinctly clearer** — elegantly structured, well-formatted, and unmistakably professional.
 """
 
-        # --- Domain/context classification ---
+        # --- Domain Classification ---
         lower_text = data.text.lower()
         if "marketing" in lower_text:
             category = "marketing"
-            context_hint = "Marketing or communication prompt. Focus on tone, conversion, and measurable outcomes."
         elif "strategy" in lower_text or "business" in lower_text:
             category = "business"
-            context_hint = "Business or strategy prompt. Focus on clarity, structure, and actionable insights."
         elif "code" in lower_text or "api" in lower_text or "function" in lower_text:
             category = "code"
-            context_hint = "Technical prompt. Focus on precision, language, and implementation clarity."
         elif "design" in lower_text or "visual" in lower_text:
             category = "design"
-            context_hint = "Design or creative prompt. Focus on aesthetic direction and stylistic clarity."
         elif "teach" in lower_text or "learn" in lower_text:
             category = "education"
-            context_hint = "Educational prompt. Focus on clarity, examples, and depth."
         elif "presentation" in lower_text or "slides" in lower_text or "deck" in lower_text:
             category = "presentation"
-            context_hint = "Presentation-related prompt. Focus on logical flow, sections, and audience engagement."
         else:
             category = "general"
-            context_hint = "General prompt. Focus on purpose, structure, and readability."
 
-        # --- UX improvement hint ---
+        # --- Category Hinting (for next phase) ---
+        category_hint = get_category_hint(data.text, category)
+
+        # --- Context Hint for model refinement ---
         context_hint = f"""
-{context_hint}
+Detected category: {category.upper()}  
+{category_hint}
 
-Show a visibly improved version of the user's input.
-Make the difference clear and educational — demonstrate how structure, tone, and specificity
-can turn a vague prompt into a professional, ready-to-run one.
+Now show a visibly improved version of the user's input.
+Demonstrate how structure, tone, and specificity can turn a vague prompt into a professional, production-ready one.
 """
 
-        # --- Construct model prompt ---
         user_prompt = f"""
 {context_hint}
 
 User input:
 {data.text}
 
-Refine and enhance this into a visibly improved, production-ready prompt
-that preserves the user’s intent but adds clarity, role, structure, and tone.
+Refine this into a structured, ready-to-run prompt that preserves intent while improving tone, role, and precision.
 Return valid JSON with 'before', 'after', and 'why'.
 """
 
@@ -210,35 +181,21 @@ Return valid JSON with 'before', 'after', and 'why'.
             ],
         )
 
-        # --- Logging + response handling ---
-        if hasattr(response, "usage") and response.usage:
-            logger.info(
-                f"Token usage - Prompt: {response.usage.prompt_tokens}, "
-                f"Completion: {response.usage.completion_tokens}, "
-                f"Total: {response.usage.total_tokens}"
-            )
-
         content = response.choices[0].message.content
         result = json.loads(content)
 
-        required_keys = ["before", "after", "why"]
-        if not all(k in result for k in required_keys):
-            raise ValueError(f"Invalid AI response keys: {list(result.keys())}")
-
-        for key in required_keys:
-            if not isinstance(result[key], str) or not result[key].strip():
-                raise ValueError(f"Empty or invalid {key} field in AI response")
+        for k in ["before", "after", "why"]:
+            if k not in result or not result[k].strip():
+                raise ValueError(f"Missing key in AI output: {k}")
 
         return {
             "before": safe_text(result["before"]).strip(),
             "after": safe_text(result["after"]).strip(),
             "why": safe_text(result["why"]).strip(),
             "category": category,
+            "hint": category_hint,  # crucial: this now gets returned for /enhance
         }
 
-    except json.JSONDecodeError as e:
-        logger.error(f"JSON decode error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to parse AI response")
     except Exception as e:
         logger.error(f"Refinement error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Refinement failed")
@@ -247,60 +204,19 @@ Return valid JSON with 'before', 'after', and 'why'.
 # --- Enhancement Endpoint ---
 @app.post("/enhance")
 async def enhance_prompt(data: EnhanceRequest):
-    """
-    Enhance a refined prompt with additional context.
-    Adds tone, depth, and purpose alignment based on user inputs and inferred domain.
-    """
     try:
         logger.info(f"Enhancing prompt of length: {len(data.refined)}")
 
         system_prompt = """
-You are an expert-level Prompt Architect.
-Your task is to take an already refined prompt and elevate it by aligning
-it precisely to the provided audience, desired outcome, and constraints.
-
-PROCESS:
-1. Analyze the refined prompt and infer its domain (technical, business, marketing, educational, presentation, creative, etc.).
-2. Interpret context:
-   - AUDIENCE → adjust tone, formality, and language complexity.
-   - OUTCOME → tailor structure, reasoning depth, or format to achieve it.
-   - CONSTRAINTS → apply limits or stylistic guidance faithfully.
-3. Enhance with purpose:
-   - Preserve structure and clarity of the refined prompt.
-   - Insert contextual cues (role, tone, objective) naturally.
-   - Strengthen clarity, alignment, and domain accuracy.
-4. Keep it lean and pragmatic — do not add decorative filler.
-5. Return valid JSON only with:
-   {
-     "before": "...",
-     "after": "...",
-     "why": "..."
-   }
-
-STYLE GUIDELINES:
-- Prefer professional, task-oriented phrasing.
-- Do not over-specify slide counts, word limits, or arbitrary numbers.
-- Reflect real-world expertise appropriate to the inferred domain.
+You are **Promptodactyl**, an expert-level Prompt Architect.
+Your mission is to take an *already refined prompt* and elevate it further — aligning it precisely with the user’s provided **audience**, **desired outcome**, and **constraints**.
+Your adjustments must sound deliberate, precise, and human-grade in intent.
 """
 
-        # --- Category-sensitive hinting ---
-        hint = ""
-        lowered = data.refined.lower()
-        if any(k in lowered for k in ["presentation", "slides", "deck"]):
-            hint = "The prompt involves a presentation. Ensure logical flow and audience engagement."
-        elif any(k in lowered for k in ["code", "api", "function", "script"]):
-            hint = "The prompt is technical. Ensure clarity, precision, and explicit inputs/outputs."
-        elif any(k in lowered for k in ["marketing", "campaign", "ad", "sales"]):
-            hint = "The prompt is marketing-focused. Optimize for persuasion, tone, and measurable outcomes."
-        elif any(k in lowered for k in ["teach", "lesson", "course", "students"]):
-            hint = "The prompt is educational. Emphasize clarity, structure, and learning goals."
-        elif any(k in lowered for k in ["design", "visual", "style", "aesthetic"]):
-            hint = "The prompt is design-related. Align tone with creativity and clarity of direction."
-        elif any(k in lowered for k in ["strategy", "plan", "business", "analysis"]):
-            hint = "The prompt is strategic. Focus on clarity, structure, and decision-oriented reasoning."
-        else:
-            hint = "General-purpose prompt. Prioritize clarity, context, and actionable structure."
+        # --- Use pre-generated hint from refinement phase ---
+        active_hint = data.hint or get_category_hint(data.refined, data.category)
 
+        # --- Build Enhancement Prompt ---
         user_prompt = f"""
 Refined prompt:
 {data.refined}
@@ -309,11 +225,10 @@ Context:
 - Audience: {data.audience or "not specified"}
 - Desired outcome: {data.outcome or "not specified"}
 - Constraints: {data.constraints or "none"}
+- Category hint: {active_hint}
 
-Additional hint: {hint}
-
-Enhance this refined prompt by aligning it to the audience, outcome, and constraints.
-Maintain structure but make it sound tailored, purposeful, and professional.
+Enhance this refined prompt by aligning it perfectly with audience, outcome, and constraints.
+Keep structure intact but increase specificity, tone alignment, and professionalism.
 Return valid JSON with 'before', 'after', and 'why'.
 """
 
@@ -328,23 +243,12 @@ Return valid JSON with 'before', 'after', and 'why'.
             ],
         )
 
-        if hasattr(response, "usage") and response.usage:
-            logger.info(
-                f"Token usage - Prompt: {response.usage.prompt_tokens}, "
-                f"Completion: {response.usage.completion_tokens}, "
-                f"Total: {response.usage.total_tokens}"
-            )
-
         content = response.choices[0].message.content
         result = json.loads(content)
 
-        required_keys = ["before", "after", "why"]
-        if not all(k in result for k in required_keys):
-            raise ValueError(f"Invalid AI response keys: {list(result.keys())}")
-
-        for key in required_keys:
-            if not isinstance(result[key], str) or not result[key].strip():
-                raise ValueError(f"Empty or invalid {key} field in AI response")
+        for k in ["before", "after", "why"]:
+            if k not in result or not result[k].strip():
+                raise ValueError(f"Missing key in AI output: {k}")
 
         return {
             "before": safe_text(result["before"]).strip(),
@@ -352,9 +256,6 @@ Return valid JSON with 'before', 'after', and 'why'.
             "why": safe_text(result["why"]).strip(),
         }
 
-    except json.JSONDecodeError as e:
-        logger.error(f"JSON decode error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to parse AI response")
     except Exception as e:
         logger.error(f"Enhancement error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Enhancement failed")
