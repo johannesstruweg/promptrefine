@@ -6,11 +6,14 @@ import os
 import json
 import logging
 
+# --- Logging Setup ---
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# --- OpenAI Client ---
 client = OpenAI()
 
+# --- FastAPI App ---
 app = FastAPI()
 
 # --- CORS Configuration ---
@@ -19,7 +22,7 @@ allowed_origins = [
     "https://www.promptodactyl.com",
     "https://promptodactyl.vercel.app",
     "http://localhost:5173",
-    "http://localhost:3000"
+    "http://localhost:3000",
 ]
 
 if os.getenv("ALLOWED_ORIGINS"):
@@ -32,7 +35,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 # --- Data Model ---
 class Prompt(BaseModel):
@@ -47,17 +49,14 @@ class Prompt(BaseModel):
             raise ValueError("Prompt must be less than 2000 characters")
         return v
 
-
-# --- Routes ---
+# --- Root Routes ---
 @app.get("/")
 async def root():
-    return {"service": "Promptodactyl API", "status": "running", "version": "1.0.0"}
-
+    return {"service": "Promptodactyl API", "status": "running", "version": "1.0.1"}
 
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
-
 
 # --- Core Refinement Endpoint ---
 @app.post("/refine")
@@ -65,66 +64,27 @@ async def refine_prompt(data: Prompt):
     try:
         logger.info(f"Refining prompt of length: {len(data.text)}")
 
-        # --- Advanced Prompt Optimizer System Instructions ---
         system_prompt = """
 You are an expert prompt engineer specializing in transforming user inputs into high-quality, production-ready prompts optimized for large language models (LLMs).
 Your purpose is to create clear, specific, domain-intelligent prompts that reliably yield superior outputs.
 
 PROCESS:
 1. Analyze Context: identify task type, domain, platform, and implicit requirements.
-   - If input <15 words or unclear, infer intent and state assumption.
 2. Generate Optimized Prompt: include role/persona, objective, structure, constraints, context/examples, and success criteria.
-   - For marketing: audience, tone, platform conventions, frameworks.
-   - For technical: stack, structure, error handling, performance.
-   - For business: audience level, CTA, compliance, and tone.
-3. Provide Optimization Analysis:
-   - Quantitative comparison: word/character counts.
-   - Qualitative improvements: list 3–5 concrete changes and their benefits.
-   - Reasoning summary: 1–2 sentences explaining why these changes improve results.
-4. Context Gathering (optional):
-   - Ask 2–3 concise questions only if necessary.
-   - If skipped, clearly state assumptions.
-5. Apply Optimization Principles:
-   - DO preserve intent, add clarity, specificity, and domain intelligence.
-   - DO anticipate model failure modes.
-   - DON’T over-engineer, contradict, or generalize improvements.
-6. Run Quality Checks:
-   - Clarity, Specificity, Completeness, Consistency, Practicality, and Formatting.
-   - Output must follow strict markdown structure defined below.
-7. Output Discipline:
-   - Return only valid JSON with keys: before, after, why.
-   - End with “[END OF OPTIMIZATION OUTPUT]”.
-
-OUTPUT FORMAT:
-{
-  "before": "original user prompt",
-  "after": "optimized, production-ready prompt with role, objective, and structure",
-  "why": "brief explanation of what was improved and why it enhances LLM reliability"
-}
-[END OF OPTIMIZATION OUTPUT]
+3. Provide Optimization Analysis with clear reasoning.
+4. Output valid JSON only with: before, after, why.
 """
 
-        # --- Context-aware hinting ---
+        # --- Context Hint ---
         lower_text = data.text.lower()
         if "marketing" in lower_text:
-            context_hint = (
-                "This prompt appears related to marketing or communication. "
-                "Emphasize target audience, tone, structure, and measurable outcomes."
-            )
+            context_hint = "This prompt appears related to marketing or communication. Focus on audience, tone, and measurable outcomes."
         elif "manufacturing" in lower_text:
-            context_hint = (
-                "This prompt appears related to manufacturing or process optimization. "
-                "Emphasize efficiency metrics, quantitative reasoning, and implementation steps."
-            )
+            context_hint = "This prompt appears related to manufacturing or process optimization. Focus on efficiency, implementation, and quantitative reasoning."
         elif "strategy" in lower_text or "business" in lower_text:
-            context_hint = (
-                "This prompt appears related to business or strategy. "
-                "Focus on actionable insights, data-driven logic, and decision clarity."
-            )
+            context_hint = "This prompt appears related to business or strategy. Focus on actionable insights and data-driven clarity."
         else:
-            context_hint = (
-                "General improvement: clarify purpose, define a clear role, and strengthen structure."
-            )
+            context_hint = "General improvement: clarify purpose, define a clear role, and strengthen structure."
 
         user_prompt = f"""
 {context_hint}
@@ -148,16 +108,19 @@ Return only valid JSON in the defined format.
             ],
         )
 
-        # --- Process Response ---
         content = response.choices[0].message.content
         result = json.loads(content)
 
         if not all(k in result for k in ["before", "after", "why"]):
             raise ValueError("Invalid response structure from AI")
 
-        # --- Add formatted versions (Markdown + HTML) ---
+        # --- Create Formatted Versions ---
         formatted_markdown = f"""
 ### Original Prompt
+{result["before"]}
+
+### Optimized Prompt
+{result["after"]}
 
 ### Why It’s Better
 {result["why"]}
@@ -176,12 +139,15 @@ Return only valid JSON in the defined format.
 </div>
 """.strip()
 
+        # --- Final Structured Response ---
         final_response = {
-            "before": result["before"],
-            "after": result["after"],
-            "why": result["why"],
-            "markdown": formatted_markdown,
-            "html": formatted_html,
+            "before": result["before"].strip(),
+            "after": result["after"].strip(),
+            "why": result["why"].strip(),
+            "formatted": {
+                "markdown": formatted_markdown,
+                "html": formatted_html,
+            },
         }
 
         logger.info("Refinement successful")
@@ -194,14 +160,9 @@ Return only valid JSON in the defined format.
         logger.error(f"Refinement error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Refinement failed: {str(e)}")
 
-
-# --- Enhancement Endpoint (Second-Stage Refinement) ---
+# --- Enhancement Endpoint ---
 @app.post("/enhance")
 async def enhance_prompt(data: dict):
-    """
-    Accepts a refined prompt and optional context details for deeper optimization.
-    Expected keys: 'refined', 'outcome', 'audience', 'constraints'
-    """
     try:
         base_prompt = data.get("refined", "")
         outcome = data.get("outcome", "")
@@ -211,21 +172,9 @@ async def enhance_prompt(data: dict):
         logger.info("Enhancing refined prompt")
 
         system_prompt = """
-You are a senior prompt optimization specialist.
-Your task is to take an already refined prompt and elevate it further using
-the additional context provided. The goal is to make the final prompt maximally
-precise, contextual, and aligned with the intended audience and purpose.
-
-When enhancing:
-1. Preserve the structure and clarity of the refined prompt.
-2. Integrate the user’s specific outcome, audience, and constraints directly into the wording.
-3. Strengthen any analytical or reasoning requirements if relevant.
-4. Maintain brevity and usability — this should be a polished, ready-to-use prompt.
-
-Return valid JSON only with:
-- before: the original refined prompt
-- after: the enhanced version
-- why: what specific contextual adjustments were made
+You are a senior prompt optimization specialist. 
+Your job is to refine an already optimized prompt using contextual details.
+Return valid JSON only with keys: before, after, why.
 """
 
         user_prompt = f"""
@@ -256,15 +205,17 @@ Enhance and return valid JSON only.
         if not all(k in result for k in ["before", "after", "why"]):
             raise ValueError("Invalid response structure from AI")
 
-        logger.info("Enhancement successful")
-        return result
+        return {
+            "before": result["before"].strip(),
+            "after": result["after"].strip(),
+            "why": result["why"].strip(),
+        }
 
     except Exception as e:
         logger.error(f"Enhancement error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Enhancement failed: {str(e)}")
 
-
-# --- Run Locally ---
+# --- Local Run ---
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
