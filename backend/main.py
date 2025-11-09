@@ -291,9 +291,6 @@ Enhance this prompt while preserving clarity, role precision, and structural con
 """
 
 
-Enhance this prompt while preserving clarity, role precision, and structural consistency.
-"""
-
         # --- Model call (unchanged) ---
         response = client.chat.completions.create(
             model=MODEL_NAME,
