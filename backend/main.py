@@ -59,6 +59,16 @@ def safe_text(value):
     return str(value)
 
 
+def ensure_str(value):
+    """Guarantee a string output even if model returns dict or list"""
+    if isinstance(value, str):
+        return value.strip()
+    try:
+        return json.dumps(value, ensure_ascii=False)
+    except Exception:
+        return str(value)
+
+
 # --- Data Models ---
 class Prompt(BaseModel):
     text: str
@@ -79,7 +89,7 @@ class EnhanceRequest(BaseModel):
     audience: str = ""
     constraints: str = ""
     category: str = ""
-    hint: str = ""  # carries forward the hint from refinement phase
+    hint: str = ""
 
     @validator("refined")
     def validate_refined(cls, v):
@@ -110,7 +120,7 @@ def get_category_hint(text: str, category: str = "") -> str:
 # --- Root Routes ---
 @app.get("/")
 async def root():
-    return {"service": "Promptodactyl API", "status": "running", "version": "1.3.0"}
+    return {"service": "Promptodactyl API", "status": "running", "version": "1.3.1"}
 
 
 @app.get("/health")
@@ -131,7 +141,6 @@ Your mission is to transform any user’s rough, incomplete, or unclear input in
 Your refined output must not only function better but **look distinctly clearer** — elegantly structured, well-formatted, and unmistakably professional.
 """
 
-        # --- Domain Classification ---
         lower_text = data.text.lower()
         if "marketing" in lower_text:
             category = "marketing"
@@ -148,15 +157,13 @@ Your refined output must not only function better but **look distinctly clearer*
         else:
             category = "general"
 
-        # --- Category Hinting (for next phase) ---
         category_hint = get_category_hint(data.text, category)
 
-        # --- Context Hint for model refinement ---
         context_hint = f"""
 Detected category: {category.upper()}  
 {category_hint}
 
-Now show a visibly improved version of the user's input.
+Show a visibly improved version of the user's input.
 Demonstrate how structure, tone, and specificity can turn a vague prompt into a professional, production-ready one.
 """
 
@@ -185,15 +192,18 @@ Return valid JSON with 'before', 'after', and 'why'.
         result = json.loads(content)
 
         for k in ["before", "after", "why"]:
-            if k not in result or not result[k].strip():
+            if k not in result:
                 raise ValueError(f"Missing key in AI output: {k}")
+            result[k] = ensure_str(result[k])
+            if not result[k]:
+                raise ValueError(f"Empty value for key: {k}")
 
         return {
-            "before": safe_text(result["before"]).strip(),
-            "after": safe_text(result["after"]).strip(),
-            "why": safe_text(result["why"]).strip(),
+            "before": safe_text(result["before"]),
+            "after": safe_text(result["after"]),
+            "why": safe_text(result["why"]),
             "category": category,
-            "hint": category_hint,  # crucial: this now gets returned for /enhance
+            "hint": category_hint,
         }
 
     except Exception as e:
@@ -213,10 +223,8 @@ Your mission is to take an *already refined prompt* and elevate it further — a
 Your adjustments must sound deliberate, precise, and human-grade in intent.
 """
 
-        # --- Use pre-generated hint from refinement phase ---
         active_hint = data.hint or get_category_hint(data.refined, data.category)
 
-        # --- Build Enhancement Prompt ---
         user_prompt = f"""
 Refined prompt:
 {data.refined}
@@ -247,13 +255,16 @@ Return valid JSON with 'before', 'after', and 'why'.
         result = json.loads(content)
 
         for k in ["before", "after", "why"]:
-            if k not in result or not result[k].strip():
+            if k not in result:
                 raise ValueError(f"Missing key in AI output: {k}")
+            result[k] = ensure_str(result[k])
+            if not result[k]:
+                raise ValueError(f"Empty value for key: {k}")
 
         return {
-            "before": safe_text(result["before"]).strip(),
-            "after": safe_text(result["after"]).strip(),
-            "why": safe_text(result["why"]).strip(),
+            "before": safe_text(result["before"]),
+            "after": safe_text(result["after"]),
+            "why": safe_text(result["why"]),
         }
 
     except Exception as e:
