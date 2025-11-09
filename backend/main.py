@@ -115,7 +115,7 @@ async def refine_prompt(data: Prompt):
         logger.info(f"Refining prompt of length: {len(data.text)}")
 
         # --- Intelligent prompt logic ---
-    system_prompt = """
+        system_prompt = """
 You are an expert prompt engineer and communication designer.
 Your job is to transform a user's rough or incomplete input into a polished,
 contextually aware, and *visibly improved* prompt that delivers superior results
