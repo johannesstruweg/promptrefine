@@ -492,6 +492,6 @@ export default function App() {
           </div>
         </div>
       )}
-    </main>  {/* ✅ This is the missing tag */}
+    </main>
   );
-}  {/* ✅ Close the component function */}
+}
