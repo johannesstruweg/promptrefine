@@ -36,10 +36,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# --- Utility Function ---
+# --- Utility ---
 def safe_text(value):
-    """Ensure AI output fields are always clean strings."""
     if isinstance(value, dict):
         return json.dumps(value, ensure_ascii=False)
     if isinstance(value, list):
@@ -64,7 +62,7 @@ class Prompt(BaseModel):
 # --- Root Routes ---
 @app.get("/")
 async def root():
-    return {"service": "Promptodactyl API", "status": "running", "version": "1.0.2"}
+    return {"service": "Promptodactyl API", "status": "running", "version": "1.1.0"}
 
 
 @app.get("/health")
@@ -80,38 +78,40 @@ async def refine_prompt(data: Prompt):
 
         system_prompt = """
 You are an expert prompt engineer specializing in transforming user inputs into high-quality, production-ready prompts optimized for large language models (LLMs).
-Your purpose is to create clear, specific, domain-intelligent prompts that reliably yield superior outputs.
-
-PROCESS:
-1. Analyze Context: identify task type, domain, platform, and implicit requirements.
-2. Generate Optimized Prompt: include role/persona, objective, structure, constraints, context/examples, and success criteria.
-3. Provide Optimization Analysis with clear reasoning.
-4. Output valid JSON only with: before, after, why.
+Return valid JSON only with: before, after, why.
 """
 
-        # --- Context Hint ---
         lower_text = data.text.lower()
         if "marketing" in lower_text:
-            context_hint = "This prompt appears related to marketing or communication. Focus on audience, tone, and measurable outcomes."
-        elif "manufacturing" in lower_text:
-            context_hint = "This prompt appears related to manufacturing or process optimization. Focus on efficiency, implementation, and quantitative reasoning."
+            category = "marketing"
+            context_hint = "Marketing or communication prompt. Focus on tone, conversion, and measurable outcomes."
         elif "strategy" in lower_text or "business" in lower_text:
-            context_hint = "This prompt appears related to business or strategy. Focus on actionable insights and data-driven clarity."
+            category = "business"
+            context_hint = "Business or strategy prompt. Focus on clarity, structure, and actionable insights."
+        elif "code" in lower_text or "api" in lower_text or "function" in lower_text:
+            category = "code"
+            context_hint = "Technical prompt. Focus on precision, language, and implementation clarity."
+        elif "design" in lower_text or "visual" in lower_text:
+            category = "design"
+            context_hint = "Design or creative prompt. Focus on aesthetic direction and stylistic clarity."
+        elif "teach" in lower_text or "learn" in lower_text:
+            category = "education"
+            context_hint = "Educational prompt. Focus on clarity, examples, and depth."
         else:
-            context_hint = "General improvement: clarify purpose, define a clear role, and strengthen structure."
+            category = "general"
+            context_hint = "General prompt. Focus on purpose, structure, and readability."
 
         user_prompt = f"""
 {context_hint}
 
-Refine and enhance the following prompt according to your system instructions:
+Refine and enhance the following prompt:
 
 {data.text}
 
-Focus on clarity, structure, and depth. Ensure the rewritten prompt defines a role, objective, and output structure.
-Return only valid JSON in the defined format.
+Be concise, clear, and structured.
+Return valid JSON with 'before', 'after', and 'why'.
 """
 
-        # --- OpenAI Call ---
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             temperature=0.4,
@@ -128,104 +128,44 @@ Return only valid JSON in the defined format.
         if not all(k in result for k in ["before", "after", "why"]):
             raise ValueError("Invalid response structure from AI")
 
-        formatted_html = f"""
-<div style='font-family:monospace;background:#0b0d10;color:#eaeaea;padding:20px;border-radius:10px;'>
-  <h3 style='color:#5da8ff;'>Original Prompt</h3>
-  <pre style='white-space:pre-wrap;background:#121417;padding:10px;border-radius:6px;'>{safe_text(result["before"])}</pre>
-
-  <h3 style='color:#5da8ff;'>Optimized Prompt</h3>
-  <pre style='white-space:pre-wrap;background:#121417;padding:10px;border-radius:6px;'>{safe_text(result["after"])}</pre>
-
-  <h3 style='color:#5da8ff;'>Why It’s Better</h3>
-  <p style='color:#bfc5ce;font-size:0.95rem;line-height:1.5;'>{safe_text(result["why"])}</p>
-</div>
-""".strip()
-
         return {
             "before": safe_text(result["before"]).strip(),
             "after": safe_text(result["after"]).strip(),
             "why": safe_text(result["why"]).strip(),
-            "formatted": {"html": formatted_html},
+            "category": category,
         }
 
-    except json.JSONDecodeError as e:
-        logger.error(f"JSON decode error: {e}")
+    except json.JSONDecodeError:
         raise HTTPException(status_code=500, detail="Failed to parse AI response")
     except Exception as e:
         logger.error(f"Refinement error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Refinement failed: {str(e)}")
 
 
-# --- Enhanced Context-Aware Enhancement Endpoint ---
+# --- Enhancement Endpoint ---
 @app.post("/enhance")
 async def enhance_prompt(data: dict):
-    """
-    Deepens contextual customization of an already refined prompt.
-    Keys: 'refined', 'outcome', 'audience', 'constraints'
-    """
     try:
         base_prompt = data.get("refined", "")
         outcome = data.get("outcome", "")
         audience = data.get("audience", "")
         constraints = data.get("constraints", "")
 
-        logger.info("Enhancing refined prompt with contextual intelligence")
-
         system_prompt = """
 You are an expert-level Prompt Architect.
-Your mission is to transform a refined prompt into an elite, context-optimized version
-using specific real-world parameters provided by the user (audience, outcome, constraints).
-
-Follow this process:
-1. Interpret Context:
-   - Analyze audience type (executives, developers, marketers, students, etc.) and adjust vocabulary, tone, and depth accordingly.
-   - Align with desired outcome (insight, decision, explanation, content generation, analysis, etc.) and optimize for that goal.
-   - Apply constraints precisely — e.g., brevity, tone, formality, style, or domain limits.
-
-2. Enhance with Purpose:
-   - Retain logical structure and clarity from the refined version.
-   - Integrate the provided audience, outcome, and constraints naturally within the wording.
-   - Strengthen reasoning depth, contextual precision, and usability.
-   - Make the prompt sound purpose-built for this exact use case.
-
-3. Balance and Style:
-   - Be assertive in your transformation but preserve the core intent.
-   - Prefer concise, high-performance wording over verbosity.
-   - You may restructure or reframe slightly if it increases clarity or alignment.
-
-Common domain mappings:
-- Business → clarity, brevity, actionability
-- Technical → precision, validation, structure
-- Marketing → persuasive tone, audience focus, measurable results
-- Education → clarity, empathy, scaffolding
-- Creative → vividness, stylistic coherence, imagination
-
-Return valid JSON only with:
-{
-  "before": "...original refined prompt...",
-  "after": "...contextually enhanced version...",
-  "why": "...explanation of how audience, outcome, and constraints influenced the prompt..."
-}
+Transform a refined prompt into a contextually enhanced version based on audience, outcome, and constraints.
+Return valid JSON only with: before, after, why.
 """
 
         user_prompt = f"""
-You are enhancing a refined prompt. Integrate and adapt it based on the following context.
-
----
 Refined prompt:
 {base_prompt}
 
-User context:
-- Audience: {audience or "not specified"}
-- Desired outcome: {outcome or "not specified"}
-- Constraints: {constraints or "none"}
----
+Audience: {audience or "not specified"}
+Desired outcome: {outcome or "not specified"}
+Constraints: {constraints or "none"}
 
-Guidelines:
-- Adjust tone, focus, and structure for the specified audience and purpose.
-- Explicitly reflect any constraints in how the task is described or limited.
-- The enhanced prompt should sound like it was designed *only* for this situation.
-- Do not add commentary or meta text — return valid JSON only.
+Enhance the tone, focus, and clarity to suit this exact situation.
 """
 
         response = client.chat.completions.create(
@@ -250,15 +190,14 @@ Guidelines:
             "why": safe_text(result["why"]).strip(),
         }
 
-    except json.JSONDecodeError as e:
-        logger.error(f"JSON decode error: {e}")
+    except json.JSONDecodeError:
         raise HTTPException(status_code=500, detail="Failed to parse AI response")
     except Exception as e:
         logger.error(f"Enhancement error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Enhancement failed: {str(e)}")
 
 
-# --- Run Locally ---
+# --- Local Run ---
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
