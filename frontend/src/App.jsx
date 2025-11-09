@@ -83,10 +83,19 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (res?.category) {
-      setPlaceholders(getEnhancePlaceholders(res.category));
-    }
-  }, [res]);
+  if (res?.context_questions?.length >= 3) {
+    // Use backend-inferred context questions
+    setPlaceholders({
+      audience: res.context_questions[0],
+      outcome: res.context_questions[1],
+      constraints: res.context_questions[2],
+    });
+  } else if (res?.category) {
+    // Fallback to static local mapping if no context questions
+    setPlaceholders(getEnhancePlaceholders(res.category));
+  }
+}, [res]);
+
 
   // --- Refinement ---
   const handleRefine = async () => {
@@ -148,11 +157,14 @@ export default function App() {
       const response = await axios.post(
         `${API_URL}/enhance`,
         {
-          refined: res.after,
-          audience: audience.trim(),
-          outcome: outcome.trim(),
-          constraints: constraints.trim(),
-        },
+  refined: res.after,
+  audience: audience.trim(),
+  outcome: outcome.trim(),
+  constraints: constraints.trim(),
+  improvement_notes: res.why || "",
+  context_questions: res.context_questions || []
+}
+,
         { signal: enhanceControllerRef.current.signal }
       );
       setEnhanced(response.data);
