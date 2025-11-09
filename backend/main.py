@@ -68,6 +68,24 @@ def ensure_str(value):
     except Exception:
         return str(value)
 
+def format_json_readable(value):
+    """Detect JSON-like content and format it into a human-readable Markdown code block."""
+    try:
+        if isinstance(value, (dict, list)):
+            obj = value
+        else:
+            obj = json.loads(value)
+        pretty = json.dumps(obj, indent=2, ensure_ascii=False)
+        return {
+            "raw": obj,
+            "pretty": f"```json\n{pretty}\n```"
+        }
+    except Exception:
+        return {
+            "raw": value,
+            "pretty": value
+        }
+
 
 # --- Data Models ---
 class Prompt(BaseModel):
@@ -198,13 +216,17 @@ Return valid JSON with 'before', 'after', and 'why'.
             if not result[k]:
                 raise ValueError(f"Empty value for key: {k}")
 
-        return {
-            "before": safe_text(result["before"]),
-            "after": safe_text(result["after"]),
-            "why": safe_text(result["why"]),
-            "category": category,
-            "hint": category_hint,
-        }
+        formatted_after = format_json_readable(result["after"])
+
+return {
+    "before": safe_text(result["before"]),
+    "after_raw": formatted_after["raw"],
+    "after_pretty": formatted_after["pretty"],
+    "why": safe_text(result["why"]),
+    "category": category,
+    "hint": category_hint,
+}
+
 
     except Exception as e:
         logger.error(f"Refinement error: {str(e)}", exc_info=True)
