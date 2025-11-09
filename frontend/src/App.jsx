@@ -258,42 +258,69 @@ export default function App() {
         </div>
       </section>
 
-      {/* Results Section */}
-      {res && (
-        <div ref={resultRef} className="mt-10 w-full max-w-3xl space-y-10">
-          {/* Refined Output */}
-          <section aria-label="Refined prompt result">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-semibold text-blue-700 uppercase">
-                Refined Prompt
-              </h2>
-              <button
-                onClick={handleCopy}
-                disabled={!res?.after}
-                className="text-sm text-blue-600 hover:text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 transition-colors"
-                aria-label="Copy refined prompt to clipboard"
-              >
-                {copied ? "✓ Copied!" : "Copy"}
-              </button>
-            </div>
-            
-            <div 
-              className="p-4 bg-gray-50 border border-gray-200 rounded-lg"
-              role="region"
-              aria-label="Refined prompt text"
-            >
-              <p className="text-gray-800 whitespace-pre-wrap leading-relaxed select-text">
-                {res.after}
-              </p>
-            </div>
-            
-            <div className="mt-4">
-              <h3 className="text-sm font-semibold text-gray-700 uppercase mb-2">
-                Why It's Better
-              </h3>
-              <p className="text-gray-600 leading-relaxed">{res.why}</p>
-            </div>
-          </section>
+     {/* Results Section */}
+{res && (
+  <div ref={resultRef} className="mt-10 w-full max-w-3xl space-y-10">
+    {/* Refined Output */}
+    <section aria-label="Refined prompt result" className="relative group">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-sm font-semibold text-blue-700 uppercase">
+          Refined Prompt
+        </h2>
+        <button
+          onClick={handleCopy}
+          disabled={!res?.after}
+          className="text-sm text-blue-600 hover:text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 transition-colors"
+          aria-label="Copy refined prompt to clipboard"
+        >
+          {copied ? "✓ Copied!" : "Copy"}
+        </button>
+      </div>
+
+      {/* Clickable output area */}
+      <div
+        onClick={handleCopy}
+        role="region"
+        aria-label="Refined prompt text"
+        className="relative p-4 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer transition hover:border-blue-300 active:ring-2 active:ring-blue-100 select-text"
+        title="Click to copy refined prompt"
+      >
+        <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+          {res.after}
+        </p>
+        {copied && (
+          <span className="absolute bottom-2 right-3 text-xs text-green-600">
+            Copied!
+          </span>
+        )}
+      </div>
+
+      {/* Why it's better */}
+      <div className="mt-4">
+        <h3 className="text-sm font-semibold text-gray-700 uppercase mb-2">
+          Why It's Better
+        </h3>
+        <p className="text-gray-600 leading-relaxed">{res.why}</p>
+      </div>
+    </section>
+
+    {/* Enhanced Output */}
+    {enhanced && (
+      <section aria-label="Enhanced prompt result" className="relative group">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-sm font-semibold text-blue-700 uppercase">
+            Enhanced Prompt
+          </h2>
+          <button
+            onClick={handleCopyEnhanced}
+            disabled={!enhanced?.after}
+            className="text-sm text-blue-600 hover:text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 transition-colors"
+            aria-label="Copy enhanced prompt to clipboard"
+          >
+            {copiedEnhanced ? "✓ Copied!" : "Copy"}
+          </button>
+        </div>
+
 
           {/* Enhancement Inputs */}
           <section className="space-y-4" aria-label="Enhancement options">
@@ -354,43 +381,52 @@ export default function App() {
             </div>
           </section>
 
-          {/* Enhanced Output */}
-          {enhanced && (
-            <section aria-label="Enhanced prompt result">
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="text-sm font-semibold text-blue-700 uppercase">
-                  Enhanced Prompt
-                </h2>
-                <button
-                  onClick={handleCopyEnhanced}
-                  disabled={!enhanced?.after}
-                  className="text-sm text-blue-600 hover:text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 transition-colors"
-                  aria-label="Copy enhanced prompt to clipboard"
-                >
-                  {copiedEnhanced ? "✓ Copied!" : "Copy"}
-                </button>
-              </div>
-              
-              <div 
-                className="p-4 bg-gray-50 border border-gray-200 rounded-lg"
-                role="region"
-                aria-label="Enhanced prompt text"
-              >
-                <p className="text-gray-800 whitespace-pre-wrap leading-relaxed select-text">
-                  {enhanced.after}
-                </p>
-              </div>
-              
-              <div className="mt-4">
-                <h3 className="text-sm font-semibold text-gray-700 uppercase mb-2">
-                  Why It's Improved
-                </h3>
-                <p className="text-gray-600 leading-relaxed">{enhanced.why}</p>
-              </div>
-            </section>
-          )}
-        </div>
+         {/* Enhanced Output */}
+{enhanced && (
+  <section aria-label="Enhanced prompt result" className="relative group">
+    <div className="flex items-center justify-between mb-2">
+      <h2 className="text-sm font-semibold text-blue-700 uppercase">
+        Enhanced Prompt
+      </h2>
+      <button
+        onClick={handleCopyEnhanced}
+        disabled={!enhanced?.after}
+        className="text-sm text-blue-600 hover:text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 transition-colors"
+        aria-label="Copy enhanced prompt to clipboard"
+      >
+        {copiedEnhanced ? "✓ Copied!" : "Copy"}
+      </button>
+    </div>
+
+    {/* Clickable output area */}
+    <div
+      onClick={handleCopyEnhanced}
+      role="region"
+      aria-label="Enhanced prompt text"
+      className="relative p-4 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer transition hover:border-blue-300 active:ring-2 active:ring-blue-100 select-text"
+      title="Click to copy enhanced prompt"
+    >
+      <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+        {enhanced.after}
+      </p>
+
+      {copiedEnhanced && (
+        <span className="absolute bottom-2 right-3 text-xs text-green-600">
+          Copied!
+        </span>
       )}
+    </div>
+
+    {/* Why section */}
+    <div className="mt-4">
+      <h3 className="text-sm font-semibold text-gray-700 uppercase mb-2">
+        Why It's Improved
+      </h3>
+      <p className="text-gray-600 leading-relaxed">{enhanced.why}</p>
+    </div>
+  </section>
+)}
+
 
       {/* Footer */}
       <footer className="text-center mt-16 mb-4 text-gray-500 text-sm">
