@@ -68,6 +68,7 @@ def ensure_str(value):
     except Exception:
         return str(value)
 
+
 def format_json_readable(value):
     """Detect JSON-like content and format it into a human-readable Markdown code block."""
     try:
@@ -138,7 +139,7 @@ def get_category_hint(text: str, category: str = "") -> str:
 # --- Root Routes ---
 @app.get("/")
 async def root():
-    return {"service": "Promptodactyl API", "status": "running", "version": "1.3.1"}
+    return {"service": "Promptodactyl API", "status": "running", "version": "1.3.2"}
 
 
 @app.get("/health")
@@ -218,15 +219,14 @@ Return valid JSON with 'before', 'after', and 'why'.
 
         formatted_after = format_json_readable(result["after"])
 
-return {
-    "before": safe_text(result["before"]),
-    "after_raw": formatted_after["raw"],
-    "after_pretty": formatted_after["pretty"],
-    "why": safe_text(result["why"]),
-    "category": category,
-    "hint": category_hint,
-}
-
+        return {
+            "before": safe_text(result["before"]),
+            "after_raw": formatted_after["raw"],
+            "after_pretty": formatted_after["pretty"],
+            "why": safe_text(result["why"]),
+            "category": category,
+            "hint": category_hint,
+        }
 
     except Exception as e:
         logger.error(f"Refinement error: {str(e)}", exc_info=True)
@@ -283,9 +283,12 @@ Return valid JSON with 'before', 'after', and 'why'.
             if not result[k]:
                 raise ValueError(f"Empty value for key: {k}")
 
+        formatted_after = format_json_readable(result["after"])
+
         return {
             "before": safe_text(result["before"]),
-            "after": safe_text(result["after"]),
+            "after_raw": formatted_after["raw"],
+            "after_pretty": formatted_after["pretty"],
             "why": safe_text(result["why"]),
         }
 
