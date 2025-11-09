@@ -178,7 +178,7 @@ Example:
 Do NOT return nested JSON structures, markdown formatting, or formatted objects. Keep all values as plain text strings with proper line break separation using \\n\\n.
 """
         
-Key additions:
+# Key additions:
 
         # Domain detection
         lower_text = data.text.lower()
