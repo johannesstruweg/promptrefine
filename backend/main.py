@@ -94,13 +94,11 @@ class EnhanceRequest(BaseModel):
 # --- Root Routes ---
 @app.get("/")
 async def root():
-    """API root endpoint with service information"""
     return {"service": "Promptodactyl API", "status": "running", "version": "1.1.0"}
 
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
     return {"status": "healthy"}
 
 
@@ -111,11 +109,11 @@ async def refine_prompt(data: Prompt):
     Refine a user prompt into a high-quality, production-ready prompt.
     Adds adaptive context cues (persona, structure, tone) without over-assuming intent.
     """
-   try:
-    logger.info(f"Refining prompt of length: {len(data.text)}")
+    try:
+        logger.info(f"Refining prompt of length: {len(data.text)}")
 
-    # --- Intelligent prompt logic ---
-    system_prompt = """
+        # --- Intelligent prompt logic ---
+        system_prompt = """
 You are an expert prompt engineer and communication designer.
 Your job is to transform a user's rough or incomplete input into a polished,
 contextually aware, and *visibly improved* prompt that delivers superior results
@@ -131,7 +129,7 @@ Your output must clearly show improvement in:
 PROCESS:
 1. Detect what the user is trying to do (e.g., write, explain, create, analyze, present, plan).
 2. Add structure or role cues that make the prompt instantly ready for execution.
-3. Never invent facts or specific numeric constraints (e.g., “10 slides”) unless the user implies them.
+3. Never invent facts or specific numeric constraints (e.g., "10 slides") unless the user implies them.
 4. Keep sentences natural and direct.
 5. Return valid JSON only with:
    {
@@ -143,46 +141,44 @@ PROCESS:
 STYLE GUIDELINES:
 - Write as if you are preparing the perfect prompt for a consultant, teacher, designer, or researcher.
 - Show *visible improvement* from before → after. The user must immediately see the added clarity and completeness.
-- Make the “why” field educational — briefly explain what you improved and why it matters.
-"""  
+- Make the "why" field educational — briefly explain what you improved and why it matters.
+"""
 
+        # --- Domain/context classification ---
+        lower_text = data.text.lower()
+        if "marketing" in lower_text:
+            category = "marketing"
+            context_hint = "Marketing or communication prompt. Focus on tone, conversion, and measurable outcomes."
+        elif "strategy" in lower_text or "business" in lower_text:
+            category = "business"
+            context_hint = "Business or strategy prompt. Focus on clarity, structure, and actionable insights."
+        elif "code" in lower_text or "api" in lower_text or "function" in lower_text:
+            category = "code"
+            context_hint = "Technical prompt. Focus on precision, language, and implementation clarity."
+        elif "design" in lower_text or "visual" in lower_text:
+            category = "design"
+            context_hint = "Design or creative prompt. Focus on aesthetic direction and stylistic clarity."
+        elif "teach" in lower_text or "learn" in lower_text:
+            category = "education"
+            context_hint = "Educational prompt. Focus on clarity, examples, and depth."
+        elif "presentation" in lower_text or "slides" in lower_text or "deck" in lower_text:
+            category = "presentation"
+            context_hint = "Presentation-related prompt. Focus on logical flow, sections, and audience engagement."
+        else:
+            category = "general"
+            context_hint = "General prompt. Focus on purpose, structure, and readability."
 
-
-    # --- Domain/context classification ---
-lower_text = data.text.lower()
-if "marketing" in lower_text:
-    category = "marketing"
-    context_hint = "Marketing or communication prompt. Focus on tone, conversion, and measurable outcomes."
-elif "strategy" in lower_text or "business" in lower_text:
-    category = "business"
-    context_hint = "Business or strategy prompt. Focus on clarity, structure, and actionable insights."
-elif "code" in lower_text or "api" in lower_text or "function" in lower_text:
-    category = "code"
-    context_hint = "Technical prompt. Focus on precision, language, and implementation clarity."
-elif "design" in lower_text or "visual" in lower_text:
-    category = "design"
-    context_hint = "Design or creative prompt. Focus on aesthetic direction and stylistic clarity."
-elif "teach" in lower_text or "learn" in lower_text:
-    category = "education"
-    context_hint = "Educational prompt. Focus on clarity, examples, and depth."
-elif "presentation" in lower_text or "slides" in lower_text or "deck" in lower_text:
-    category = "presentation"
-    context_hint = "Presentation-related prompt. Focus on logical flow, sections, and audience engagement."
-else:
-    category = "general"
-    context_hint = "General prompt. Focus on purpose, structure, and readability."
-
-# --- UX improvement hint ---
-context_hint = f"""
+        # --- UX improvement hint ---
+        context_hint = f"""
 {context_hint}
 
-Show a visibly improved version of the user's input. 
-Make the difference clear and educational — demonstrate how structure, tone, and specificity 
+Show a visibly improved version of the user's input.
+Make the difference clear and educational — demonstrate how structure, tone, and specificity
 can turn a vague prompt into a professional, ready-to-run one.
 """
 
-# --- Construct model prompt ---
-user_prompt = f"""
+        # --- Construct model prompt ---
+        user_prompt = f"""
 {context_hint}
 
 User input:
@@ -205,10 +201,12 @@ Return valid JSON with 'before', 'after', and 'why'.
         )
 
         # --- Logging + response handling ---
-        if hasattr(response, 'usage') and response.usage:
-            logger.info(f"Token usage - Prompt: {response.usage.prompt_tokens}, "
-                        f"Completion: {response.usage.completion_tokens}, "
-                        f"Total: {response.usage.total_tokens}")
+        if hasattr(response, "usage") and response.usage:
+            logger.info(
+                f"Token usage - Prompt: {response.usage.prompt_tokens}, "
+                f"Completion: {response.usage.completion_tokens}, "
+                f"Total: {response.usage.total_tokens}"
+            )
 
         content = response.choices[0].message.content
         result = json.loads(content)
@@ -236,7 +234,6 @@ Return valid JSON with 'before', 'after', and 'why'.
         raise HTTPException(status_code=500, detail="Refinement failed")
 
 
-
 # --- Enhancement Endpoint ---
 @app.post("/enhance")
 async def enhance_prompt(data: EnhanceRequest):
@@ -247,7 +244,6 @@ async def enhance_prompt(data: EnhanceRequest):
     try:
         logger.info(f"Enhancing prompt of length: {len(data.refined)}")
 
-        # --- Adaptive enhancement logic ---
         system_prompt = """
 You are an expert-level Prompt Architect.
 Your task is to take an already refined prompt and elevate it by aligning
@@ -311,7 +307,6 @@ Maintain structure but make it sound tailored, purposeful, and professional.
 Return valid JSON with 'before', 'after', and 'why'.
 """
 
-        # --- OpenAI call ---
         response = client.chat.completions.create(
             model=MODEL_NAME,
             temperature=0.55,
@@ -323,10 +318,12 @@ Return valid JSON with 'before', 'after', and 'why'.
             ],
         )
 
-        if hasattr(response, 'usage') and response.usage:
-            logger.info(f"Token usage - Prompt: {response.usage.prompt_tokens}, "
-                        f"Completion: {response.usage.completion_tokens}, "
-                        f"Total: {response.usage.total_tokens}")
+        if hasattr(response, "usage") and response.usage:
+            logger.info(
+                f"Token usage - Prompt: {response.usage.prompt_tokens}, "
+                f"Completion: {response.usage.completion_tokens}, "
+                f"Total: {response.usage.total_tokens}"
+            )
 
         content = response.choices[0].message.content
         result = json.loads(content)
