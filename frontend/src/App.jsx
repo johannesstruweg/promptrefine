@@ -24,21 +24,13 @@ export default function App() {
   const resultRef = useRef(null);
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-  // --- Contextual placeholder logic ---
+  // --- Contextual placeholders ---
   const getEnhancePlaceholders = (input) => {
     const lower = input.toLowerCase();
     if (lower.includes("code") || lower.includes("api") || lower.includes("function"))
-      return [
-        "What language or framework?",
-        "Target behavior or output?",
-        "Performance or readability priority?",
-      ];
+      return ["What language or framework?", "Target behavior or output?", "Performance or readability priority?"];
     if (lower.includes("business") || lower.includes("strategy") || lower.includes("market"))
-      return [
-        "Target market or audience?",
-        "Desired outcome or insight?",
-        "Constraints (budget, time, etc.)?",
-      ];
+      return ["Target market or audience?", "Desired outcome or insight?", "Constraints (budget, time, etc.)?"];
     if (lower.includes("write") || lower.includes("story") || lower.includes("blog") || lower.includes("email"))
       return ["Who’s your reader?", "Tone or mood?", "Any key themes or constraints?"];
     if (lower.includes("design") || lower.includes("visual") || lower.includes("style"))
@@ -80,8 +72,7 @@ export default function App() {
         resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     } catch (err) {
-      const message =
-        err.response?.data?.detail || "Something went wrong. Please try again.";
+      const message = err.response?.data?.detail || "Something went wrong. Please try again.";
       setError(message);
       console.error("Refinement error:", err);
     } finally {
@@ -115,7 +106,7 @@ export default function App() {
     }
   };
 
-  // --- Copy handlers ---
+  // --- Copy Handlers ---
   const handleCopy = async () => {
     if (!res?.after) return;
     try {
@@ -138,7 +129,7 @@ export default function App() {
     }
   };
 
-  // --- Key press behavior ---
+  // --- Key behavior ---
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -211,30 +202,37 @@ export default function App() {
       {/* Output */}
       {res && (
         <div ref={resultRef} className="mt-12 w-full max-w-3xl mx-auto relative z-10 space-y-10">
-          {/* NEW */}
-          <section>
-            <h2 className="text-sm font-semibold text-blue-600 uppercase mb-2 cursor-pointer select-none hover:underline" onClick={handleCopy}>
-              NEW – click/tap to copy
-            </h2>
-            <p className="text-gray-800 leading-relaxed font-medium cursor-pointer select-text" onClick={handleCopy}>
-              {res.after}
-            </p>
-            {copied && <span className="text-xs text-green-600">(Copied!)</span>}
-          </section>
+          {/* Render Styled HTML if available */}
+          {res.formatted?.html ? (
+            <div
+              className="rounded-lg shadow-md border border-gray-200 overflow-hidden"
+              dangerouslySetInnerHTML={{ __html: res.formatted.html }}
+            />
+          ) : (
+            <>
+              <section>
+                <h2 className="text-sm font-semibold text-blue-600 uppercase mb-2 cursor-pointer select-none hover:underline" onClick={handleCopy}>
+                  NEW – click/tap to copy
+                </h2>
+                <p className="text-gray-800 leading-relaxed font-medium cursor-pointer select-text" onClick={handleCopy}>
+                  {res.after}
+                </p>
+                {copied && <span className="text-xs text-green-600">(Copied!)</span>}
+              </section>
 
-          {/* Original */}
-          <section>
-            <h2 className="text-sm font-semibold text-gray-600 uppercase mb-2">Original</h2>
-            <p className="text-gray-700 leading-relaxed">{res.before}</p>
-          </section>
+              <section>
+                <h2 className="text-sm font-semibold text-gray-600 uppercase mb-2">Original</h2>
+                <p className="text-gray-700 leading-relaxed">{res.before}</p>
+              </section>
 
-          {/* Why it's better */}
-          <section>
-            <h2 className="text-sm font-semibold text-gray-600 uppercase mb-2">Why it's better</h2>
-            <p className="text-gray-700 leading-relaxed">{res.why}</p>
-          </section>
+              <section>
+                <h2 className="text-sm font-semibold text-gray-600 uppercase mb-2">Why it's better</h2>
+                <p className="text-gray-700 leading-relaxed">{res.why}</p>
+              </section>
+            </>
+          )}
 
-          {/* Enhance */}
+          {/* Enhancement Inputs */}
           <section className="space-y-4">
             <h2 className="text-sm font-semibold text-gray-600 uppercase mb-2">Enhance</h2>
 
@@ -276,7 +274,7 @@ export default function App() {
             </div>
           </section>
 
-          {/* Enhanced Version */}
+          {/* Enhanced Output */}
           {enhanced && (
             <section>
               <h2 className="text-sm font-semibold text-blue-700 uppercase mb-2 cursor-pointer select-none hover:underline" onClick={handleCopyEnhanced}>
@@ -291,7 +289,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Footer & Privacy Policy */}
+      {/* Footer */}
       <footer className="text-center mt-16 mb-4 text-gray-500 text-sm relative z-10">
         <p>
           Powered by GPT-5 • © 2025 Promptodactyl by{" "}
@@ -304,43 +302,6 @@ export default function App() {
           Privacy Policy
         </button>
       </footer>
-
-      {showPolicy && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-white text-gray-800 rounded-lg shadow-lg w-full max-w-2xl p-6 relative overflow-y-auto max-h-[80vh]">
-            <button onClick={() => setShowPolicy(false)} className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-xl font-semibold" aria-label="Close Privacy Policy">
-              ×
-            </button>
-            <h2 className="text-lg font-semibold mb-3">Privacy Policy</h2>
-            <p>Last updated: 11.2025</p>
-            <p className="mt-4">
-              Promptodactyl is designed to work without collecting personal information. Your prompts and creative flow belong entirely to you.
-            </p>
-            <p className="mt-4">
-              We don’t collect email addresses, names, logins, cookies, browsing history, or analytics data. No prompt content is ever stored on our servers.
-            </p>
-            <p className="mt-4">
-              Your optimization history lives in your browser using localStorage. It never leaves your device. You can clear it anytime from your browser or the History page.
-            </p>
-            <p className="mt-4">
-              We only retain minimal anonymized metrics for performance and abuse prevention, such as prompt length, success rates, and hashed IPs that auto-expire. Nothing is personally identifiable.
-            </p>
-            <p className="mt-4">
-              When you refine or enhance a prompt, it’s sent securely to OpenAI’s API, processed, and returned to you. No content is stored by Promptodactyl. For OpenAI’s practices, visit their Privacy Policy.
-            </p>
-            <p className="mt-4">
-              You have full control over your data. Clear history, use private browsing, or disable local storage at any time.
-            </p>
-            <p className="mt-4">
-              We use only essential third-party services, such as the OpenAI API. We do not sell or share data with any advertisers or analytics platforms.
-            </p>
-            <p className="mt-4">
-              If this policy changes, updates will appear here with the revised date. Questions? Contact privacy@stratagentic.ai.
-            </p>
-            <p className="mt-4">Your data. Your words. Your control.</p>
-          </div>
-        </div>
-      )}
     </main>
   );
 }
