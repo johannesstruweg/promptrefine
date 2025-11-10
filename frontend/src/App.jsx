@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
-import { inject, track } from "@vercel/analytics";  // <-- include track
-
+import { inject, track } from "@vercel/analytics";
 inject();
 
 export default function App() {
@@ -105,106 +104,93 @@ export default function App() {
 
 
   // --- Refinement ---
-  const handleRefine = async () => {
+  // --- Refinement ---
+const handleRefine = async () => {
   track("Prompt Refined");
-  ...
+
+  const trimmed = text.trim();
+  if (trimmed.length < 10) {
+    setRefineError("Please enter at least 10 characters");
+    return;
+  }
+  if (trimmed.length > 5000) {
+    setRefineError("Max 5000 characters");
+    return;
+  }
+
+  if (refineControllerRef.current) {
+    refineControllerRef.current.abort();
+  }
+  refineControllerRef.current = new AbortController();
+
+  setLoading(true);
+  setRes(null);
+  setEnhanced(null);
+  setRefineError(null);
+  setEnhanceError(null);
+
+  try {
+    const response = await axios.post(
+      `${API_URL}/refine`,
+      { text: trimmed },
+      { signal: refineControllerRef.current.signal }
+    );
+    setRes(response.data);
+    setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+  } catch (err) {
+    if (err.name === "CanceledError") return;
+    setRefineError(err.response?.data?.detail || "Something went wrong. Please try again.");
+    console.error("Refinement error:", err);
+  } finally {
+    setLoading(false);
+    refineControllerRef.current = null;
+  }
 };
-    const handleRefine = async () => {
-    const trimmed = text.trim();
-    if (trimmed.length < 10) {
-      setRefineError("Please enter at least 10 characters");
-      return;
-    }
-    if (trimmed.length > 5000) {
-      setRefineError("Max 5000 characters");
-      return;
-    }
 
-    // Cancel previous request if exists
-    if (refineControllerRef.current) {
-      refineControllerRef.current.abort();
-    }
-    refineControllerRef.current = new AbortController();
 
-    setLoading(true);
-    setRes(null);
-    setEnhanced(null);
-    setRefineError(null);
-    setEnhanceError(null);
+ // --- Refinement ---
+const handleRefine = async () => {
+  track("Prompt Refined");
 
-    try {
-      const response = await axios.post(
-        `${API_URL}/refine`,
-        { text: trimmed },
-        { signal: refineControllerRef.current.signal }
-      );
-      setRes(response.data);
-      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-    } catch (err) {
-      if (err.name === "CanceledError") return;
-      setRefineError(err.response?.data?.detail || "Something went wrong. Please try again.");
-      console.error("Refinement error:", err);
-    } finally {
-      setLoading(false);
-      refineControllerRef.current = null;
-    }
-  };
+  const trimmed = text.trim();
+  if (trimmed.length < 10) {
+    setRefineError("Please enter at least 10 characters");
+    return;
+  }
+  if (trimmed.length > 5000) {
+    setRefineError("Max 5000 characters");
+    return;
+  }
 
-  // --- Enhancement ---
-  const handleEnhance = async () => {
-  track("Prompt Enhanced");
-  ...
+  if (refineControllerRef.current) {
+    refineControllerRef.current.abort();
+  }
+  refineControllerRef.current = new AbortController();
+
+  setLoading(true);
+  setRes(null);
+  setEnhanced(null);
+  setRefineError(null);
+  setEnhanceError(null);
+
+  try {
+    const response = await axios.post(
+      `${API_URL}/refine`,
+      { text: trimmed },
+      { signal: refineControllerRef.current.signal }
+    );
+    setRes(response.data);
+    setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+  } catch (err) {
+    if (err.name === "CanceledError") return;
+    setRefineError(err.response?.data?.detail || "Something went wrong. Please try again.");
+    console.error("Refinement error:", err);
+  } finally {
+    setLoading(false);
+    refineControllerRef.current = null;
+  }
 };
-  const handleEnhance = async () => {
-    if (!res?.after) return;
 
-    // Cancel previous request if exists
-    if (enhanceControllerRef.current) {
-      enhanceControllerRef.current.abort();
-    }
-    enhanceControllerRef.current = new AbortController();
-
-    setEnhancing(true);
-    setEnhanced(null);
-    setEnhanceError(null);
-
-    try {
-      const response = await axios.post(
-        `${API_URL}/enhance`,
-        {
-  refined: res.after,
-  audience: audience.trim(),
-  outcome: outcome.trim(),
-  constraints: constraints.trim(),
-  improvement_notes: res.why || "",
-  context_questions: res.context_questions || []
-}
-,
-        { signal: enhanceControllerRef.current.signal }
-      );
-      setEnhanced(response.data);
-      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-    } catch (err) {
-      if (err.name === "CanceledError") return;
-      console.error("Enhancement failed:", err);
-      setEnhanceError(err.response?.data?.detail || "Enhancement failed. Please try again.");
-    } finally {
-      setEnhancing(false);
-      enhanceControllerRef.current = null;
-    }
-  };
-
-  // --- Copy Handlers ---
-  const handleCopy = async () => {
-    if (!res?.after) return;
-    try {
-      await navigator.clipboard.writeText(res.after);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Copy failed:", err);
-    }
-  };
 
   const handleCopyEnhanced = async () => {
     if (!enhanced?.after) return;
