@@ -216,7 +216,7 @@ const handleEnhance = async () => {
           alt="Promptodactyl Logo" 
           className="mx-auto mb-4 w-56 h-auto" 
         />
-        <p className="text-gray-600 text-lg">Prompts that take flight.</p>
+        <p className="text-gray-600 text-lg">Prompts that take flight</p>
       </header>
 
       {/* Input Section */}
@@ -228,7 +228,7 @@ const handleEnhance = async () => {
           id="prompt-input"
           rows={8}
           className="w-full p-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 resize-none"
-          placeholder="Enter your prompt (Cmd/Ctrl+Enter to refine)"
+          placeholder="Enter your idea/prompt"
           value={text}
           onChange={(e) => {
             setText(e.target.value);
@@ -240,7 +240,7 @@ const handleEnhance = async () => {
           aria-invalid={!!refineError}
         />
         <div id="char-count" className="text-sm text-right text-gray-500 mt-1">
-          {text.length} / 5000
+          {text.length}
         </div>
         
         {refineError && (
@@ -407,7 +407,7 @@ const handleEnhance = async () => {
       {/* Footer */}
 <footer className="text-center mt-16 mb-2 text-gray-500 text-sm relative z-10">
   <p>
-    Powered by ChatGPT • © 2025 Promptodactyl by{" "}
+    Powered by ChatGPT\n© 2025 Promptodactyl by{" "}
     <a
       href="https://stratagentic.ai"
       target="_blank"
@@ -422,7 +422,7 @@ const handleEnhance = async () => {
   <div className="mt-2">
     <button
       onClick={() => setShowPolicy(true)}
-      className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors"
+      className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
     >
       Privacy Policy
     </button>
@@ -449,21 +449,21 @@ const handleEnhance = async () => {
 
             <div className="w-10 h-1.5 bg-gray-300 rounded-full mx-auto mb-4" />
 
-            <h2 className="text-lg font-semibold mb-3 text-center">Privacy Policy</h2>
-            <p className="text-sm text-center text-gray-500 mb-6">Last updated: 11.2025</p>
+            <h2 className="text-lg font-semibold mb-3">Privacy Policy</h2>
+            <p className="space-y-4 text-sm text-gray-500 mb-6">Updated Nov 2025</p>
 
             <div className="space-y-4 text-sm leading-relaxed">
               <p>
-                Promptodactyl is designed to work without collecting personal information. Your prompts and creative flow belong entirely to you.
+                Promptodactyl works without collecting personal information. Your prompts and creative flow belong entirely to you.
               </p>
               <p>
-                We don’t collect email addresses, names, logins, cookies, browsing history, or analytics data. No prompt content is ever stored on our servers.
+                We don’t collect email addresses, names, logins, cookies, or browsing history. No prompt content is ever stored on our servers.
               </p>
               <p>
-                Your optimization history lives in your browser using localStorage. It never leaves your device. You can clear it anytime from your browser or the History page.
+                Activity history is stored in your browser using localStorage, never leaving your device. You can clear it anytime from your browser or the History page.
               </p>
               <p>
-                We only retain minimal anonymized metrics for performance and abuse prevention, such as prompt length, success rates, and hashed IPs that auto-expire. Nothing is personally identifiable.
+                We retain anonymized metrics for performance and abuse prevention, such as prompt length, success rates, and hashed IPs that auto-expire. Nothing is personally identifiable.
               </p>
               <p>
                 When you refine or enhance a prompt, it’s sent securely to OpenAI’s API, processed, and returned to you. No content is stored by Promptodactyl. For OpenAI’s practices, visit their Privacy Policy.
@@ -475,15 +475,18 @@ const handleEnhance = async () => {
                 We use only essential third-party services, such as the OpenAI API. We do not sell or share data with any advertisers or analytics platforms.
               </p>
               <p>
-                If this policy changes, updates will appear here with the revised date. Questions? Contact{" "}
+                If this policy changes, updates will appear here with the revised date. 
+              </p>
+              <p>
+                Questions? Contact{" "}
                 <a
                   href="mailto:privacy@stratagentic.ai"
-                  className="text-blue-600 hover:text-blue-700 underline"
+                  className="text-blue-600 hover:text-blue-700"
                 >
-                  privacy@stratagentic.ai
+                  privacy@promptodactyl.com
                 </a>.
               </p>
-              <p className="font-medium text-center">Your data. Your words. Your control.</p>
+              <p className="font-medium text">The Promptodactyl Team.</p>
             </div>
           </div>
         </div>
