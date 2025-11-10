@@ -103,7 +103,7 @@ export default function App() {
 }, [res]);
 
 
-  // --- Refinement ---
+ // --- Refinement ---
 const handleRefine = async () => {
   track("Prompt Refined");
 
@@ -146,49 +146,46 @@ const handleRefine = async () => {
   }
 };
 
-
- // --- Enhancement ---
-const handleEnhanced = async () => {
+// --- Enhancement ---
+const handleEnhance = async () => {
   track("Prompt Enhanced");
 
-  const trimmed = text.trim();
-  if (trimmed.length < 10) {
-    setRefineError("Please enter at least 10 characters");
-    return;
-  }
-  if (trimmed.length > 5000) {
-    setRefineError("Max 5000 characters");
-    return;
-  }
+  if (!res?.after) return;
 
-  if (refineControllerRef.current) {
-    refineControllerRef.current.abort();
+  if (enhanceControllerRef.current) {
+    enhanceControllerRef.current.abort();
   }
-  refineControllerRef.current = new AbortController();
+  enhanceControllerRef.current = new AbortController();
 
-  setLoading(true);
-  setRes(null);
+  setEnhancing(true);
   setEnhanced(null);
-  setRefineError(null);
   setEnhanceError(null);
 
   try {
     const response = await axios.post(
-      `${API_URL}/refine`,
-      { text: trimmed },
-      { signal: refineControllerRef.current.signal }
+      `${API_URL}/enhance`,
+      {
+        refined: res.after,
+        audience: audience.trim(),
+        outcome: outcome.trim(),
+        constraints: constraints.trim(),
+        improvement_notes: res.why || "",
+        context_questions: res.context_questions || []
+      },
+      { signal: enhanceControllerRef.current.signal }
     );
-    setRes(response.data);
+    setEnhanced(response.data);
     setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
   } catch (err) {
     if (err.name === "CanceledError") return;
-    setRefineError(err.response?.data?.detail || "Something went wrong. Please try again.");
-    console.error("Refinement error:", err);
+    console.error("Enhancement failed:", err);
+    setEnhanceError(err.response?.data?.detail || "Enhancement failed. Please try again.");
   } finally {
-    setLoading(false);
-    refineControllerRef.current = null;
+    setEnhancing(false);
+    enhanceControllerRef.current = null;
   }
 };
+
 
 
   const handleCopyEnhanced = async () => {
