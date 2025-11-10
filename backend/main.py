@@ -319,6 +319,43 @@ Enhance this prompt while preserving clarity, precision, and structure.
         logger.error(f"Enhancement error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Enhancement failed")
 
+# --- Rating System ---
+
+from fastapi import Query
+import json, os
+
+DATA_FILE = "feedback.json"
+
+class Feedback(BaseModel):
+    prompt_id: str
+    rating: int
+
+def load_data():
+    if not os.path.exists(DATA_FILE):
+        return {}
+    with open(DATA_FILE) as f:
+        return json.load(f)
+
+def save_data(data):
+    with open(DATA_FILE, "w") as f:
+        json.dump(data, f)
+
+@app.post("/feedback")
+def post_feedback(fb: Feedback):
+    data = load_data()
+    ratings = data.setdefault(fb.prompt_id, [])
+    ratings.append(fb.rating)
+    save_data(data)
+    avg = round(sum(ratings)/len(ratings), 1)
+    return {"avg": avg}
+
+@app.get("/feedback/avg")
+def get_avg(prompt_id: str = Query(...)):
+    data = load_data()
+    ratings = data.get(prompt_id, [])
+    avg = round(sum(ratings)/len(ratings), 1) if ratings else 0.0
+    return {"avg": avg}
+
 
 # --- Local Run ---
 if __name__ == "__main__":
