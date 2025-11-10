@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
-import { inject } from "@vercel/analytics";
+import { inject, track } from "@vercel/analytics";  // <-- include track
 
 inject();
 
@@ -106,6 +106,10 @@ export default function App() {
 
   // --- Refinement ---
   const handleRefine = async () => {
+  track("Prompt Refined");
+  ...
+};
+    const handleRefine = async () => {
     const trimmed = text.trim();
     if (trimmed.length < 10) {
       setRefineError("Please enter at least 10 characters");
@@ -147,6 +151,10 @@ export default function App() {
   };
 
   // --- Enhancement ---
+  const handleEnhance = async () => {
+  track("Prompt Enhanced");
+  ...
+};
   const handleEnhance = async () => {
     if (!res?.after) return;
 
