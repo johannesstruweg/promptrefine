@@ -104,7 +104,6 @@ export default function App() {
 
 
   // --- Refinement ---
-  // --- Refinement ---
 const handleRefine = async () => {
   track("Prompt Refined");
 
