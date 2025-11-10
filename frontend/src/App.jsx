@@ -147,9 +147,9 @@ const handleRefine = async () => {
 };
 
 
- // --- Refinement ---
-const handleRefine = async () => {
-  track("Prompt Refined");
+ // --- Enhancement ---
+const handleEnhanced = async () => {
+  track("Prompt Enhanced");
 
   const trimmed = text.trim();
   if (trimmed.length < 10) {
