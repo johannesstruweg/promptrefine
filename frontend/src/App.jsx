@@ -454,7 +454,7 @@ const handleEnhance = async () => {
 
             <div className="space-y-4 text-sm leading-relaxed">
               <p>
-                Promptodactyl works without collecting personal information. Your prompts and creative flow belong entirely to you.
+                Promptodactyl works without collecting personal information. Your prompts and iterations belong entirely to you.
               </p>
               <p>
                 We don’t collect email addresses, names, logins, cookies, or browsing history. No prompt content is ever stored on our servers.
@@ -484,9 +484,9 @@ const handleEnhance = async () => {
                   className="text-blue-600 hover:text-blue-700"
                 >
                   privacy@promptodactyl.com
-                </a>.
+                </a>
               </p>
-              <p className="font-medium text">The Promptodactyl Team.</p>
+              <p className="font-medium text">The Promptodactyl Team</p>
             </div>
           </div>
         </div>
