@@ -105,7 +105,18 @@ export default function App() {
 
 
  // --- Refinement ---
-const handleRefine = async () => {
+const handleCopy = async () => {
+  if (!res?.after) return;
+  try {
+    await navigator.clipboard.writeText(res.after);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  } catch (err) {
+    console.error("Copy failed:", err);
+  }
+};
+
+  const handleRefine = async () => {
   track("Prompt Refined");
 
   const trimmed = text.trim();
