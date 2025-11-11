@@ -23,7 +23,7 @@ export default function Rating({ promptId, API_URL }) {
   }
 
   return (
-    <div style={{ fontSize: "1.4rem", marginTop: "0.5rem" }}>
+    <div style={{ fontSize: "1.2rem", marginTop: "0.5rem" }}>
       {[1, 2, 3, 4, 5].map(n => (
         <span
           key={n}
