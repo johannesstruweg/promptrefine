@@ -295,6 +295,9 @@ const handleEnhance = async () => {
                 {stripMarkdown(res.after)}
               </p>
             </div>
+            {/* --- Rating stars appear here --- */}
+<Rating promptId={res.prompt_id || "default"} API_URL={API_URL} />
+
             
             <div className="mt-4">
               <h3 className="text-sm font-semibold text-gray-700 uppercase mb-2">
