@@ -422,7 +422,7 @@ const handleEnhance = async () => {
       {/* Footer */}
 <footer className="text-center mt-16 mb-2 text-gray-500 text-sm relative z-10">
   <p>
-    Powered by ChatGPT\n© 2025 Promptodactyl by{" "}
+    Powered by ChatGPT <br /> © 2025 Promptodactyl by{" "}
     <a
       href="https://stratagentic.ai"
       target="_blank"
