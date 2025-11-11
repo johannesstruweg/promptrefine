@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { inject, track } from "@vercel/analytics";
 inject();
-import Rating from "./src/Ratings";
+import Rating from "./Rating";
 
 export default function App() {
   const [text, setText] = useState("");
