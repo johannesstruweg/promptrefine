@@ -22,8 +22,10 @@ export default function Rating({ promptId, API_URL }) {
     setAvg(data.avg);
   }
 
-  return (
-    <div style={{ fontSize: "1.2rem", marginTop: "0.5rem" }}>
+ return (
+  <div style={{ marginTop: "0.5rem" }}>
+    {/* Bigger stars */}
+    <span style={{ fontSize: "1.8rem" }}>
       {[1, 2, 3, 4, 5].map(n => (
         <span
           key={n}
@@ -37,7 +39,14 @@ export default function Rating({ promptId, API_URL }) {
           ★
         </span>
       ))}
-      {avg !== null && <span style={{ marginLeft: 6 }}>({avg})</span>}
-    </div>
-  );
+    </span>
+
+    {/* Smaller, subtle average */}
+    {avg !== null && (
+      <span style={{ marginLeft: 6, fontSize: "1.2rem", color: "#666" }}>
+        ({avg})
+      </span>
+    )}
+  </div>
+);
 }
