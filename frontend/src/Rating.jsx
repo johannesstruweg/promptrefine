@@ -5,10 +5,11 @@ export default function Rating({ promptId, API_URL }) {
   const [avg, setAvg] = useState(null);
 
   useEffect(() => {
-    fetch(`${API_URL}/feedback/avg?prompt_id=${promptId}`)
-      .then(res => res.json())
-      .then(data => setAvg(data.avg));
-  }, [promptId]);
+  fetch(`${API_URL}/feedback/avg?prompt_id=${promptId}`)
+    .then(res => res.ok ? res.json() : { avg: 0 })
+    .then(data => setAvg(data.avg ?? 0))
+    .catch(() => setAvg(0));
+}, [promptId]);
 
   async function handleRate(value) {
     setRating(value);
