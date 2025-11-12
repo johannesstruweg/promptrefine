@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 # --- Configuration ---
 MODEL_NAME = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-API_TIMEOUT = float(os.getenv("OPENAI_TIMEOUT", "30.0"))
+API_TIMEOUT = float(os.getenv("OPENAI_TIMEOUT", "90.0"))
 client = OpenAI()
 app = FastAPI()
 
