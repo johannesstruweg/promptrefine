@@ -60,8 +60,8 @@ class Prompt(BaseModel):
         v = v.strip()
         if len(v) < 10:
             raise ValueError("Prompt must be at least 10 characters")
-        if len(v) > 2000:
-            raise ValueError("Prompt must be less than 2000 characters")
+        if len(v) > 5000:
+            raise ValueError("Prompt must be less than 5000 characters")
         return v
 
 
