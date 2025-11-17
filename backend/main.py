@@ -33,12 +33,15 @@ app.add_middleware(
     allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*"]
+)
 
-    redis = Redis(
+# --- Redis Setup ---
+redis = Redis(
     url=os.getenv("UPSTASH_REDIS_REST_URL"),
     token=os.getenv("UPSTASH_REDIS_REST_TOKEN")
 )
+
 
 # --- Startup Event ---
 @app.on_event("startup")
