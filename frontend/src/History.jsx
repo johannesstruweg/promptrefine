@@ -36,11 +36,11 @@ export default function History({ open, onClose, onReinsert }) {
         className="w-full max-w-md bg-white h-full shadow-xl p-6 overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
+
         {/* Header */}
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-gray-800">
-            Recent Prompts
-          </h2>
+          <h2 className="text-lg font-semibold text-gray-800">Recent Prompts</h2>
+
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
@@ -72,21 +72,57 @@ export default function History({ open, onClose, onReinsert }) {
           </button>
         )}
 
-        {/* Entries */}
+        {/* History Entries */}
         <div className="space-y-4">
           {items.map((item) => (
             <div
               key={item.id}
               className="p-4 bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
             >
+              {/* Timestamp */}
               <p className="text-xs text-gray-400 mb-2">
                 {new Date(item.ts).toLocaleString()}
               </p>
 
+              {/* Original */}
               <p className="text-xs text-gray-500 mb-1">Original:</p>
               <p className="text-gray-700 mb-3 whitespace-pre-wrap">
                 {item.before}
               </p>
 
+              {/* Refined */}
               <p className="text-xs text-gray-500 mb-1">Refined:</p>
-              <p
+              <p className="text-gray-800 whitespace-pre-wrap">
+                {item.after}
+              </p>
+
+              {/* Actions */}
+              <div className="flex justify-between items-center mt-4">
+                <button
+                  onClick={() => onReinsert(item.before)}
+                  className="text-sm text-blue-600 hover:text-blue-800 underline"
+                >
+                  Reinsert
+                </button>
+
+                <button
+                  onClick={() => deleteItem(item.id)}
+                  className="text-sm text-red-600 hover:text-red-800 underline"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Empty State */}
+        {items.length === 0 && (
+          <p className="text-gray-500 text-center text-sm mt-20">
+            No history yet.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
