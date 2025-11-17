@@ -250,7 +250,7 @@ Write the final output in this language: {detected_language}
         prompt_id = str(uuid.uuid4())
 
         # --- Dynamic context reflection ---
-    try:
+        try:
         reflection_prompt = f"""
 You are Promptodactyl's Context Mirror.
 Given the refined prompt and improvement notes, infer 3 short, natural follow-up questions that clarify audience, outcome, or constraints.
