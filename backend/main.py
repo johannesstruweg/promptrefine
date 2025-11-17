@@ -51,6 +51,7 @@ async def startup_event():
     logger.info(f"Using model: {MODEL_NAME}")
     logger.info(f"API timeout set to: {API_TIMEOUT}s")
 
+
 # --- Utility ---
 def safe_text(value):
     if isinstance(value, dict):
@@ -58,6 +59,7 @@ def safe_text(value):
     if isinstance(value, list):
         return " ".join(str(v) for v in value)
     return str(value)
+
 
 # --- Data Models ---
 class RefineRequest(BaseModel):
@@ -72,9 +74,7 @@ class RefineRequest(BaseModel):
         if len(v) > 5000:
             raise ValueError("Prompt must be less than 5000 characters")
         return v
-        
-@app.post("/feedback")
-def post_feedback(fb: Feedback):
+
 
 class EnhanceRequest(BaseModel):
     refined: str
@@ -82,12 +82,30 @@ class EnhanceRequest(BaseModel):
     audience: str = ""
     constraints: str = ""
     improvement_notes: str = ""
-    context_questions: list[str] | None = None  # fixed indentation
+    context_questions: list[str] | None = None
     language: str = "en"
+
 
 class Feedback(BaseModel):
     prompt_id: str
     rating: int
+
+
+# --- Redis-backed Feedback Endpoint ---
+@app.post("/feedback")
+def post_feedback(fb: Feedback):
+    sum_key = f"rating:{fb.prompt_id}:sum"
+    count_key = f"rating:{fb.prompt_id}:count"
+
+    redis.incrby(sum_key, fb.rating)
+    redis.incrby(count_key, 1)
+
+    total_sum = int(redis.get(sum_key) or 0)
+    total_count = int(redis.get(count_key) or 1)
+    avg = round(total_sum / total_count, 1)
+
+    return {"avg": avg}
+
 
 # --- Root Routes ---
 @app.get("/")
