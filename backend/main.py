@@ -263,9 +263,44 @@ async def health_check():
         return {"status": "degraded", "redis": "disconnected"}
 
 # --- Feedback Endpoints ---
+@app.get("/feedback/global-avg")
+async def get_global_average():
+    """Get the global average rating across ALL prompts."""
+    try:
+        # Get all rating keys
+        all_keys = redis.keys("rating:*:sum")
+        
+        if not all_keys:
+            return {"avg": 0.0, "total_ratings": 0}
+        
+        total_sum = 0
+        total_count = 0
+        
+        # Aggregate across all prompts
+        for sum_key in all_keys:
+            # Extract prompt_id from key pattern "rating:{prompt_id}:sum"
+            prompt_id = sum_key.split(":")[1]
+            count_key = f"rating:{prompt_id}:count"
+            
+            prompt_sum = int(redis.get(sum_key) or 0)
+            prompt_count = int(redis.get(count_key) or 0)
+            
+            total_sum += prompt_sum
+            total_count += prompt_count
+        
+        avg = round(total_sum / total_count, 1) if total_count > 0 else 0.0
+        
+        logger.info(f"Global average: {avg} from {total_count} ratings across {len(all_keys)} prompts")
+        return {"avg": avg, "total_ratings": total_count}
+        
+    except Exception as e:
+        logger.error(f"Failed to retrieve global average: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve global average")
+
+
 @app.post("/feedback")
 async def post_feedback(fb: Feedback):
-    """Store user feedback and return updated average."""
+    """Store user feedback and return global average."""
     try:
         sum_key = f"rating:{fb.prompt_id}:sum"
         count_key = f"rating:{fb.prompt_id}:count"
@@ -273,19 +308,38 @@ async def post_feedback(fb: Feedback):
         redis.incrby(sum_key, fb.rating)
         redis.incrby(count_key, 1)
 
-        total_sum = int(redis.get(sum_key) or 0)
-        total_count = int(redis.get(count_key) or 1)
-        avg = round(total_sum / total_count, 1)
+        # Calculate global average
+        all_keys = redis.keys("rating:*:sum")
+        total_sum = 0
+        total_count = 0
+        
+        for sum_key_item in all_keys:
+            prompt_id = sum_key_item.split(":")[1]
+            count_key_item = f"rating:{prompt_id}:count"
+            
+            prompt_sum = int(redis.get(sum_key_item) or 0)
+            prompt_count = int(redis.get(count_key_item) or 0)
+            
+            total_sum += prompt_sum
+            total_count += prompt_count
+        
+        global_avg = round(total_sum / total_count, 1) if total_count > 0 else 0.0
 
-        logger.info(f"Feedback recorded for {fb.prompt_id}: {fb.rating}/5 (avg: {avg})")
-        return {"avg": avg, "count": total_count}
+        logger.info(f"Feedback recorded for {fb.prompt_id}: {fb.rating}/5 (global avg: {global_avg})")
+        return {
+            "success": True,
+            "global_avg": global_avg,
+            "global_total": total_count
+        }
+        
     except Exception as e:
         logger.error(f"Feedback storage failed: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to store feedback")
 
+
 @app.get("/feedback/avg")
 async def get_avg(prompt_id: str = Query(..., description="Unique prompt identifier")):
-    """Retrieve average rating for a prompt."""
+    """Retrieve average rating for a specific prompt (legacy endpoint)."""
     try:
         sum_key = f"rating:{prompt_id}:sum"
         count_key = f"rating:{prompt_id}:count"
