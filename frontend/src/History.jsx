@@ -1,3 +1,5 @@
+import { useState, useEffect } from "react";
+
 export default function History({ open, onClose, onReinsert }) {
   const [items, setItems] = useState([]);
 
@@ -87,35 +89,4 @@ export default function History({ open, onClose, onReinsert }) {
               </p>
 
               <p className="text-xs text-gray-500 mb-1">Refined:</p>
-              <p className="text-gray-800 whitespace-pre-wrap">
-                {item.after}
-              </p>
-
-              <div className="flex justify-between items-center mt-4">
-                <button
-                  onClick={() => onReinsert(item.before)}
-                  className="text-sm text-blue-600 hover:text-blue-800 underline"
-                >
-                  Reinsert
-                </button>
-
-                <button
-                  onClick={() => deleteItem(item.id)}
-                  className="text-sm text-red-600 hover:text-red-800 underline"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {items.length === 0 && (
-          <p className="text-gray-500 text-center text-sm mt-20">
-            No history yet.
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
+              <p
