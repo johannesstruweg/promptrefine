@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import axios from "axios";
 
 export default function Rating({ promptId, API_URL }) {
   const [rating, setRating] = useState(0);
