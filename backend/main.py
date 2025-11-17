@@ -91,6 +91,21 @@ async def health_check():
 async def refine_prompt(data: RefineRequest):
     try:
         lower_text = data.text.lower()
+        # --- Detect language of the input text ---
+try:
+    lang_detection = client.chat.completions.create(
+        model=MODEL_NAME,
+        temperature=0.0,
+        timeout=5,
+        messages=[
+            {"role": "system", "content": "Detect the language of the user text. Respond with only the ISO code, e.g., 'en', 'es', 'no', 'nl', 'af'."},
+            {"role": "user", "content": data.text}
+        ],
+    )
+    detected_language = lang_detection.choices[0].message.content.strip().lower()
+except:
+    detected_language = "en"  # safe fallback
+
         if "marketing" in lower_text:
             category = "marketing"
             context_hint = "Marketing or communication prompt. Focus on tone, conversion, and measurable outcomes."
@@ -191,7 +206,7 @@ User input:
 
 Refine and improve this into a professional, structured, production-ready prompt.
 
-Write the final output in this language: {data.language}
+Write the final output in this language: {detected_language}
 """
 
         response = client.chat.completions.create(
@@ -219,7 +234,7 @@ Refined prompt:
 Improvement notes:
 {result['why']}
 
-Write all questions in this language: {data.language}
+Write all questions in this language: {detected_language}
 
 Respond ONLY as JSON:
 {{"questions": ["q1", "q2", "q3"]}}
@@ -242,6 +257,7 @@ Respond ONLY as JSON:
             "why": safe_text(result["why"]).strip(),
             "category": category,
             "context_questions": dynamic_qs,
+            "detected_language": detected_language,
         }
 
     except Exception as e:
@@ -302,7 +318,7 @@ Constraints: {data.constraints or inferred_constraints}
 
 Enhance this prompt while preserving clarity, precision, and structure.
 
-Write the final output in this language: {data.language}
+Write the final output in this language: {data.language.lower()}
 """
 
         response = client.chat.completions.create(
