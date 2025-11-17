@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, validator
 from openai import OpenAI
+from upstash_redis import Redis
 import os
 import json
 import logging
@@ -33,6 +34,10 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+
+    redis = Redis(
+    url=os.getenv("UPSTASH_REDIS_REST_URL"),
+    token=os.getenv("UPSTASH_REDIS_REST_TOKEN")
 )
 
 # --- Startup Event ---
@@ -356,38 +361,32 @@ Write the final output in this language: {data.language.lower()}
 from fastapi import Query
 import json, os
 
-DATA_FILE = "feedback.json"
-
-class Feedback(BaseModel):
-    prompt_id: str
-    rating: int
-
-def load_data():
-    if not os.path.exists(DATA_FILE):
-        return {}
-    with open(DATA_FILE) as f:
-        return json.load(f)
-
-def save_data(data):
-    with open(DATA_FILE, "w") as f:
-        json.dump(data, f)
-
 @app.post("/feedback")
 def post_feedback(fb: Feedback):
-    data = load_data()
-    ratings = data.setdefault(fb.prompt_id, [])
-    ratings.append(fb.rating)
-    save_data(data)
-    avg = round(sum(ratings)/len(ratings), 1)
+    sum_key = f"rating:{fb.prompt_id}:sum"
+    count_key = f"rating:{fb.prompt_id}:count"
+
+    # Increment totals
+    redis.incrby(sum_key, fb.rating)
+    redis.incrby(count_key, 1)
+
+    # Compute new average
+    total_sum = int(redis.get(sum_key) or 0)
+    total_count = int(redis.get(count_key) or 1)
+    avg = round(total_sum / total_count, 1)
+
     return {"avg": avg}
 
 @app.get("/feedback/avg")
 def get_avg(prompt_id: str = Query(...)):
-    data = load_data()
-    ratings = data.get(prompt_id, [])
-    avg = round(sum(ratings)/len(ratings), 1) if ratings else 0.0
-    return {"avg": avg}
+    sum_key = f"rating:{prompt_id}:sum"
+    count_key = f"rating:{prompt_id}:count"
 
+    total_sum = int(redis.get(sum_key) or 0)
+    total_count = int(redis.get(count_key) or 0)
+
+    avg = round(total_sum / total_count, 1) if total_count > 0 else 0.0
+    return {"avg": avg}
 
 # --- Local Run ---
 if __name__ == "__main__":
