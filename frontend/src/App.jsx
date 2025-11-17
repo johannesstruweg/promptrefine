@@ -262,7 +262,9 @@ const handleEnhance = async () => {
         <p className="text-gray-600 text-lg">Prompts that take flight</p>
       </header>
 
-      <div className="flex justify-end mt-3">
+      {/* Input Section */}
+      <section className="w-full max-w-3xl" aria-label="Prompt input">
+        <div className="flex justify-end mb-2">
   <button
     onClick={() => setShowHistory(true)}
     className="p-2 rounded hover:bg-gray-100 transition"
@@ -285,9 +287,6 @@ const handleEnhance = async () => {
   </button>
 </div>
 
-
-      {/* Input Section */}
-      <section className="w-full max-w-3xl" aria-label="Prompt input">
         <label htmlFor="prompt-input" className="sr-only">
           Enter your prompt
         </label>
