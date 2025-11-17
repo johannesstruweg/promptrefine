@@ -52,8 +52,9 @@ def safe_text(value):
     return str(value)
 
 # --- Data Models ---
-class Prompt(BaseModel):
+class RefineRequest(BaseModel):
     text: str
+    language: str = "en"
 
     @validator("text")
     def validate_text(cls, v):
@@ -72,7 +73,7 @@ class EnhanceRequest(BaseModel):
     constraints: str = ""
     improvement_notes: str = ""
     context_questions: list[str] | None = None  # fixed indentation
-
+    language: str = "en"
 
 # --- Root Routes ---
 @app.get("/")
@@ -189,6 +190,8 @@ User input:
 {data.text}
 
 Refine and improve this into a professional, structured, production-ready prompt.
+
+Write the final output in this language: {data.language}
 """
 
         response = client.chat.completions.create(
@@ -215,6 +218,8 @@ Refined prompt:
 
 Improvement notes:
 {result['why']}
+
+Write all questions in this language: {data.language}
 
 Respond ONLY as JSON:
 {{"questions": ["q1", "q2", "q3"]}}
@@ -283,7 +288,7 @@ Return valid JSON with exactly:
             inferred_outcome = "What should this achieve?"
             inferred_constraints = "Any tone or format constraints?"
 
-        enhancement_context = f"""
+enhancement_context = f"""
 Refined prompt:
 {data.refined}
 
@@ -295,7 +300,10 @@ Desired outcome: {data.outcome or inferred_outcome}
 Constraints: {data.constraints or inferred_constraints}
 
 Enhance this prompt while preserving clarity, precision, and structure.
+
+Write the final output in this language: {data.language}
 """
+
 
         response = client.chat.completions.create(
             model=MODEL_NAME,
