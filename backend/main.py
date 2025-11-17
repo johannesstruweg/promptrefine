@@ -255,10 +255,10 @@ async def enhance_prompt(data: EnhanceRequest):
     try:
         system_prompt = f"""
 You are Promptodactyl, an expert-level Prompt Architect.
-Your mission is to take an already refined prompt and elevate it further — aligning it precisely with the user's audience, desired outcome, and constraints.
+Your mission is to take an already refined prompt and elevate it further, aligning it precisely with the user's audience, desired outcome, and constraints.
 
 MANDATORY STRUCTURE REQUIREMENTS
-Your enhanced prompt MUST maintain or improve the sectioned structure:
+Your enhanced prompt must maintain or improve the sectioned structure:
 [Context/role tailored to audience]
 
 [Main objective aligned with desired outcome]
@@ -276,10 +276,11 @@ STYLE RULES
 OUTPUT FORMAT
 Return valid JSON with exactly:
 - "before": the refined prompt input
-- "after": the enhanced version (plain text with \\n\\n breaks)
+- "after": the enhanced version (plain text with double line breaks)
 - "why": how you adapted it
 """
 
+        # handle dynamic placeholder fallbacks
         dynamic_qs = getattr(data, "context_questions", None)
         if dynamic_qs and isinstance(dynamic_qs, list) and len(dynamic_qs) >= 3:
             inferred_audience, inferred_outcome, inferred_constraints = dynamic_qs[:3]
@@ -288,7 +289,7 @@ Return valid JSON with exactly:
             inferred_outcome = "What should this achieve?"
             inferred_constraints = "Any tone or format constraints?"
 
-enhancement_context = f"""
+        enhancement_context = f"""
 Refined prompt:
 {data.refined}
 
@@ -304,7 +305,6 @@ Enhance this prompt while preserving clarity, precision, and structure.
 Write the final output in this language: {data.language}
 """
 
-
         response = client.chat.completions.create(
             model=MODEL_NAME,
             temperature=0.55,
@@ -317,6 +317,7 @@ Write the final output in this language: {data.language}
         )
 
         result = json.loads(response.choices[0].message.content)
+
         return {
             "before": safe_text(result["before"]).strip(),
             "after": safe_text(result["after"]).strip(),
