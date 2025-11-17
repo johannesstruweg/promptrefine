@@ -14,6 +14,7 @@ export default function App() {
   const [enhanceError, setEnhanceError] = useState(null);
   const [copied, setCopied] = useState(false);
   const [copiedEnhanced, setCopiedEnhanced] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   const [showPolicy, setShowPolicy] = useState(false);
 
@@ -103,6 +104,15 @@ export default function App() {
   }
 }, [res]);
 
+   // --- History ---
+  const handleReinsert = (text) => {
+  setText(text);
+  setShowHistory(false);
+  setTimeout(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, 100);
+};
+
 
  // --- Refinement ---
 const handleCopy = async () => {
@@ -151,21 +161,21 @@ const handleCopy = async () => {
   { signal: refineControllerRef.current.signal }
 );
     setRes(response.data);
-    // --- Save to local history (max 5 items) ---
-  try {
-    const history = JSON.parse(localStorage.getItem("prompt_history") || "[]");
+   // Save to local history (max 5)
+try {
+  const prev = JSON.parse(localStorage.getItem("prompt_history") || "[]");
 
-    const entry = {
+  const entry = {
     id: Date.now(),
     before: trimmed,
-    after: response.data.after
+    after: response.data.after,
+    ts: Date.now()
   };
 
-  const updated = [entry, ...history].slice(0, 5);
-
+  const updated = [entry, ...prev].slice(0, 5);
   localStorage.setItem("prompt_history", JSON.stringify(updated));
 } catch (err) {
-  console.error("Failed to write local history", err);
+  console.error("History save failed:", err);
 }
 
     setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
@@ -253,6 +263,30 @@ const handleEnhance = async () => {
         />
         <p className="text-gray-600 text-lg">Prompts that take flight</p>
       </header>
+
+      <div className="flex justify-end mb-2">
+  <button
+    onClick={() => setShowHistory(true)}
+    className="p-2 rounded hover:bg-gray-100 transition"
+    aria-label="Show history"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className="h-5 w-5 text-gray-600"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 0 0118 0z"
+      />
+    </svg>
+  </button>
+</div>
+
 
       {/* Input Section */}
       <section className="w-full max-w-3xl" aria-label="Prompt input">
@@ -441,6 +475,11 @@ const handleEnhance = async () => {
           )}
         </div>
       )}
+<History
+  open={showHistory}
+  onClose={() => setShowHistory(false)}
+  onReinsert={handleReinsert}
+/>
 
       {/* Footer */}
 <footer className="text-center mt-16 mb-2 text-gray-500 text-sm relative z-10">
