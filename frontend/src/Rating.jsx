@@ -6,6 +6,9 @@ export default function Rating({ promptId, API_URL }) {
   const [avg, setAvg] = useState(0);
   const [hasVoted, setHasVoted] = useState(false);
 
+console.log("RATING COMPONENT promptId =", promptId);
+
+
   // Load average + detect previous vote
   useEffect(() => {
     // Check if this user already voted for this prompt
