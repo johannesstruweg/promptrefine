@@ -151,6 +151,23 @@ const handleCopy = async () => {
   { signal: refineControllerRef.current.signal }
 );
     setRes(response.data);
+    // --- Save to local history (max 5 items) ---
+  try {
+    const history = JSON.parse(localStorage.getItem("prompt_history") || "[]");
+
+    const entry = {
+    id: Date.now(),
+    before: trimmed,
+    after: response.data.after
+  };
+
+  const updated = [entry, ...history].slice(0, 5);
+
+  localStorage.setItem("prompt_history", JSON.stringify(updated));
+} catch (err) {
+  console.error("Failed to write local history", err);
+}
+
     setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
   } catch (err) {
     if (err.name === "CanceledError") return;
