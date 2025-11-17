@@ -92,23 +92,6 @@ class Feedback(BaseModel):
     prompt_id: str
     rating: int
 
-
-# --- Redis-backed Feedback Endpoint ---
-@app.post("/feedback")
-def post_feedback(fb: Feedback):
-    sum_key = f"rating:{fb.prompt_id}:sum"
-    count_key = f"rating:{fb.prompt_id}:count"
-
-    redis.incrby(sum_key, fb.rating)
-    redis.incrby(count_key, 1)
-
-    total_sum = int(redis.get(sum_key) or 0)
-    total_count = int(redis.get(count_key) or 1)
-    avg = round(total_sum / total_count, 1)
-
-    return {"avg": avg}
-
-
 # --- Root Routes ---
 @app.get("/")
 async def root():
@@ -262,14 +245,13 @@ Write the final output in this language: {detected_language}
         )
 
         result = json.loads(response.choices[0].message.content)
-
         # --- Generate unique prompt ID ---
         import uuid
         prompt_id = str(uuid.uuid4())
 
         # --- Dynamic context reflection ---
-        try:
-            reflection_prompt = f"""
+    try:
+        reflection_prompt = f"""
 You are Promptodactyl's Context Mirror.
 Given the refined prompt and improvement notes, infer 3 short, natural follow-up questions that clarify audience, outcome, or constraints.
 
@@ -310,7 +292,6 @@ Respond ONLY as JSON:
     except Exception as e:
         logger.error(f"Refinement error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Refinement failed")
-
 
 # --- Enhancement Endpoint (separate route) ---
 @app.post("/enhance")
