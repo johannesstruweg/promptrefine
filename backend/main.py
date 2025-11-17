@@ -88,7 +88,7 @@ async def health_check():
 
 # --- Core Refinement Endpoint ---
 @app.post("/refine")
-async def refine_prompt(data: PromptRefine):
+async def refine_prompt(data: RefineRequest):
     try:
         lower_text = data.text.lower()
         if "marketing" in lower_text:
