@@ -120,6 +120,7 @@ const handleCopy = async () => {
   track("Prompt Refined");
 
   const trimmed = text.trim();
+  const userLang = navigator.language || "en";
   if (trimmed.length < 10) {
     setRefineError("Please enter at least 10 characters");
     return;
@@ -142,10 +143,13 @@ const handleCopy = async () => {
 
   try {
     const response = await axios.post(
-      `${API_URL}/refine`,
-      { text: trimmed },
-      { signal: refineControllerRef.current.signal }
-    );
+  `${API_URL}/refine`,
+  { 
+    text: trimmed,
+    language: userLang
+  },
+  { signal: refineControllerRef.current.signal }
+);
     setRes(response.data);
     setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
   } catch (err) {
@@ -175,17 +179,19 @@ const handleEnhance = async () => {
 
   try {
     const response = await axios.post(
-      `${API_URL}/enhance`,
-      {
-        refined: res.after,
-        audience: audience.trim(),
-        outcome: outcome.trim(),
-        constraints: constraints.trim(),
-        improvement_notes: res.why || "",
-        context_questions: res.context_questions || []
-      },
-      { signal: enhanceControllerRef.current.signal }
-    );
+  `${API_URL}/enhance`,
+  {
+    refined: res.after,
+    audience: audience.trim(),
+    outcome: outcome.trim(),
+    constraints: constraints.trim(),
+    improvement_notes: res.why || "",
+    context_questions: res.context_questions || [],
+    language: navigator.language || "en"
+  },
+  { signal: enhanceControllerRef.current.signal }
+);
+
     setEnhanced(response.data);
     setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
   } catch (err) {
