@@ -132,7 +132,6 @@ const handleCopy = async () => {
   track("Prompt Refined");
 
   const trimmed = text.trim();
-  const userLang = navigator.language || "en";
   if (trimmed.length < 10) {
     setRefineError("Please enter at least 10 characters");
     return;
@@ -156,12 +155,10 @@ const handleCopy = async () => {
   try {
     const response = await axios.post(
   `${API_URL}/refine`,
-  { 
-    text: trimmed,
-    language: userLang
-  },
+  { text: trimmed },
   { signal: refineControllerRef.current.signal }
 );
+
     setRes(response.data);
    // Save to local history (max 5)
 try {
