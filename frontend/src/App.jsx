@@ -3,6 +3,8 @@ import axios from "axios";
 import { inject, track } from "@vercel/analytics";
 inject();
 import Rating from "./Rating";
+import History from "./History";
+
 
 export default function App() {
   const [text, setText] = useState("");
