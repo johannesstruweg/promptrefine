@@ -25,8 +25,10 @@ allowed_origins = [
     "http://localhost:5173",
     "http://localhost:3000",
 ]
-if os.getenv("ALLOWED_ORIGINS"):
-    allowed_origins.extend(os.getenv("ALLOWED_ORIGINS").split(","))
+
+extra_origins = os.getenv("ALLOWED_ORIGINS")
+if extra_origins:
+    allowed_origins.extend(extra_origins.split(","))
 
 app.add_middleware(
     CORSMiddleware,
