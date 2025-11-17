@@ -72,7 +72,9 @@ class RefineRequest(BaseModel):
         if len(v) > 5000:
             raise ValueError("Prompt must be less than 5000 characters")
         return v
-
+        
+@app.post("/feedback")
+def post_feedback(fb: Feedback):
 
 class EnhanceRequest(BaseModel):
     refined: str
@@ -82,6 +84,10 @@ class EnhanceRequest(BaseModel):
     improvement_notes: str = ""
     context_questions: list[str] | None = None  # fixed indentation
     language: str = "en"
+
+class Feedback(BaseModel):
+    prompt_id: str
+    rating: int
 
 # --- Root Routes ---
 @app.get("/")
