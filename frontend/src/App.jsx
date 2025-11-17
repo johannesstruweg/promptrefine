@@ -263,7 +263,7 @@ const handleEnhance = async () => {
       </header>
 
       {/* Input Section */}
-      <section className="w-full max-w-3xl" aria-label="Prompt input">
+      <section className="w-full max-w-3xl pt-4" aria-label="Prompt input">
         <div className="flex justify-end mb-2">
   <button
     onClick={() => setShowHistory(true)}
