@@ -216,7 +216,6 @@ const handleEnhance = async () => {
     constraints: constraints.trim(),
     improvement_notes: res.why || "",
     context_questions: res.context_questions || [],
-    language: navigator.language || "en"
   },
   { signal: enhanceControllerRef.current.signal }
 );
