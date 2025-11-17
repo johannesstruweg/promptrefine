@@ -262,7 +262,7 @@ const handleEnhance = async () => {
         <p className="text-gray-600 text-lg">Prompts that take flight</p>
       </header>
 
-      <div className="flex justify-end mb-2">
+      <div className="flex justify-end mt-3">
   <button
     onClick={() => setShowHistory(true)}
     className="p-2 rounded hover:bg-gray-100 transition"
