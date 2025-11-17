@@ -260,9 +260,10 @@ Write the final output in this language: {detected_language}
         )
 
         result = json.loads(response.choices[0].message.content)
-        import uuid
-prompt_id = str(uuid.uuid4())
 
+        # --- Generate unique prompt ID ---
+        import uuid
+        prompt_id = str(uuid.uuid4())
 
         # --- Dynamic context reflection ---
         try:
@@ -288,13 +289,14 @@ Respond ONLY as JSON:
                 response_format={"type": "json_object"},
                 messages=[{"role": "user", "content": reflection_prompt}],
             )
+
             dynamic_qs = json.loads(reflection.choices[0].message.content)["questions"]
         except Exception as sub_e:
             logger.warning(f"Context reflection failed: {str(sub_e)}")
             dynamic_qs = ["Who is this for?", "What is the purpose?", "Any constraints?"]
 
         return {
-            "prompt_id": prompt_id, 
+            "prompt_id": prompt_id,
             "before": safe_text(result["before"]).strip(),
             "after": safe_text(result["after"]).strip(),
             "why": safe_text(result["why"]).strip(),
