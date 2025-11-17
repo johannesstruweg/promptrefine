@@ -261,7 +261,7 @@ Write the final output in this language: {detected_language}
 
         result = json.loads(response.choices[0].message.content)
         import uuid
-            prompt_id = str(uuid.uuid4())
+prompt_id = str(uuid.uuid4())
 
 
         # --- Dynamic context reflection ---
