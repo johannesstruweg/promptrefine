@@ -4,6 +4,7 @@ import { inject, track } from "@vercel/analytics";
 inject();
 import Rating from "./Rating";
 import History from "./History";
+import SuggestionCards from "./SuggestionCards";
 
 
 export default function App() {
@@ -17,9 +18,7 @@ export default function App() {
   const [copied, setCopied] = useState(false);
   const [copiedEnhanced, setCopiedEnhanced] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-
   const [showPolicy, setShowPolicy] = useState(false);
-
   const [enterToSubmit, setEnterToSubmit] = useState(true);
 
   const [audience, setAudience] = useState("");
@@ -30,6 +29,11 @@ export default function App() {
     outcome: "What result are you hoping for?",
     constraints: "Anything else to consider?",
   });
+
+  const handleSuggestionInsert = (text) => {
+  setText(text);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const resultRef = useRef(null);
   const refineControllerRef = useRef(null);
@@ -338,6 +342,13 @@ const handleEnhance = async () => {
             )}
           </button>
         </div>
+
+        {!res && (
+          <div className="mt-6">
+          <SuggestionCards onSelect={handleSuggestionInsert} />
+          </div>
+        )}
+
       </section>
 
       {/* Results Section */}
