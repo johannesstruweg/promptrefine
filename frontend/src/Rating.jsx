@@ -76,7 +76,7 @@ export default function Rating({ promptId, API_URL }) {
   return (
     <div style={{ marginTop: "0.5rem" }}>
       {/* Interactive stars for voting */}
-      <span style={{ fontSize: "1.8rem" }}>
+      <span style={{ fontSize: "1.2rem" }}>
         {[1, 2, 3, 4, 5].map((n) => (
           <span
             key={n}
@@ -104,7 +104,7 @@ export default function Rating({ promptId, API_URL }) {
       
       {/* Global average display */}
       {globalCount > 0 && (
-        <span style={{ marginLeft: 6, fontSize: "1.2rem", color: "#666" }}>
+        <span style={{ marginLeft: 6, fontSize: "1rem", color: "#666" }}>
           ({globalAvg.toFixed(1)})
         </span>
       )}
