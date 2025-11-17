@@ -37,6 +37,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(Exception)
+async def cors_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error"},
+        headers={"Access-Control-Allow-Origin": "*"}
+    )
 
 # --- Redis Setup ---
 redis = Redis(
@@ -91,6 +100,20 @@ class EnhanceRequest(BaseModel):
 class Feedback(BaseModel):
     prompt_id: str
     rating: int
+# --- Redis-backed Feedback Endpoint ---
+@app.post("/feedback")
+def post_feedback(fb: Feedback):
+    sum_key = f"rating:{fb.prompt_id}:sum"
+    count_key = f"rating:{fb.prompt_id}:count"
+
+    redis.incrby(sum_key, fb.rating)
+    redis.incrby(count_key, 1)
+
+    total_sum = int(redis.get(sum_key) or 0)
+    total_count = int(redis.get(count_key) or 1)
+    avg = round(total_sum / total_count, 1)
+
+    return {"avg": avg}
 
 # --- Root Routes ---
 @app.get("/")
@@ -372,26 +395,6 @@ Write the final output in this language: {data.language.lower()}
         logger.error(f"Enhancement error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Enhancement failed")
 
-# --- Rating System ---
-
-from fastapi import Query
-import json, os
-
-@app.post("/feedback")
-def post_feedback(fb: Feedback):
-    sum_key = f"rating:{fb.prompt_id}:sum"
-    count_key = f"rating:{fb.prompt_id}:count"
-
-    # Increment totals
-    redis.incrby(sum_key, fb.rating)
-    redis.incrby(count_key, 1)
-
-    # Compute new average
-    total_sum = int(redis.get(sum_key) or 0)
-    total_count = int(redis.get(count_key) or 1)
-    avg = round(total_sum / total_count, 1)
-
-    return {"avg": avg}
 
 @app.get("/feedback/avg")
 def get_avg(prompt_id: str = Query(...)):
