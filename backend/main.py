@@ -236,7 +236,7 @@ class EnhanceRequest(BaseModel):
     improvement_notes: str = ""
     context_questions: list[str] | None = None
     language: str = "en"
-    user_input_language_reference: str = "" # <--- LINE 328: ADDED FIELD TO RECEIVE ORIGINAL TEXT
+    user_input_language_reference: str = ""
 
 class Feedback(BaseModel):
     prompt_id: str
@@ -498,9 +498,11 @@ async def enhance_prompt(data: EnhanceRequest):
                 response_language = "en" # Fallback if no reference is provided
         # <--- LINE 497: END OF LANGUAGE DETERMINATION LOGIC
 
-        system_prompt = """
+        system_prompt = f"""
 You are Promptodactyl, an expert-level Prompt Architect.
 Your mission is to take an already refined prompt and elevate it further, aligning it precisely with the user's audience, desired outcome, and constraints.
+
+NON-NEGOTIABLE RULE: The final enhanced prompt MUST be written entirely in the target language specified at the end of the user prompt. Ensure zero intrusion of English or any other language unless the user input text explicitly contains non-translatable proper nouns (like company names or specific technical terms).
 
 MANDATORY STRUCTURE REQUIREMENTS
 Your enhanced prompt must maintain or improve the sectioned structure:
