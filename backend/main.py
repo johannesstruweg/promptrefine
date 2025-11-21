@@ -152,15 +152,15 @@ def categorize_prompt(text: str) -> tuple[str, str]:
     
     categories = {
         "marketing": ("Marketing or communication prompt. Focus on tone, conversion, and measurable outcomes.", 
-                     ["marketing", "campaign", "audience"]),
+                      ["marketing", "campaign", "audience"]),
         "business": ("Business or strategy prompt. Focus on clarity, structure, and actionable insights.", 
-                    ["strategy", "business", "revenue", "growth"]),
+                     ["strategy", "business", "revenue", "growth"]),
         "code": ("Technical prompt. Focus on precision, inputs, and implementation clarity.", 
-                ["code", "api", "function", "programming", "debug"]),
+                 ["code", "api", "function", "programming", "debug"]),
         "design": ("Design or creative prompt. Focus on visual clarity and intent.", 
-                  ["design", "visual", "ui", "ux", "interface"]),
+                   ["design", "visual", "ui", "ux", "interface"]),
         "education": ("Educational prompt. Focus on clarity, examples, and depth.", 
-                     ["teach", "learn", "explain", "tutorial", "lesson"]),
+                      ["teach", "learn", "explain", "tutorial", "lesson"]),
     }
     
     for category, (hint, keywords) in categories.items():
@@ -236,6 +236,7 @@ class EnhanceRequest(BaseModel):
     improvement_notes: str = ""
     context_questions: list[str] | None = None
     language: str = "en"
+    user_input_language_reference: str = "" # <--- LINE 328: ADDED FIELD TO RECEIVE ORIGINAL TEXT
 
 class Feedback(BaseModel):
     prompt_id: str
@@ -488,6 +489,15 @@ Write the final output in this language: {detected_language}
 async def enhance_prompt(data: EnhanceRequest):
     """Enhance a refined prompt with user-specified context."""
     try:
+        # Determine the language to use for the response
+        response_language = data.language.lower()
+        if not data.language or response_language == "en":
+            if data.user_input_language_reference:
+                response_language = detect_language(data.user_input_language_reference)
+            else:
+                response_language = "en" # Fallback if no reference is provided
+        # <--- LINE 497: END OF LANGUAGE DETERMINATION LOGIC
+
         system_prompt = """
 You are Promptodactyl, an expert-level Prompt Architect.
 Your mission is to take an already refined prompt and elevate it further, aligning it precisely with the user's audience, desired outcome, and constraints.
@@ -537,7 +547,7 @@ Constraints: {data.constraints or inferred_constraints}
 
 Enhance this prompt while preserving clarity, precision, and structure.
 
-Write the final output in this language: {data.language.lower()}
+Write the final output in this language: {response_language}
 """
 
         response = client.chat.completions.create(
