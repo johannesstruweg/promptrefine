@@ -566,10 +566,10 @@ const handleEnhance = async () => {
               <p>
                 Questions? Contact{" "}
                 <a
-                  href="mailto:privacy@stratagentic.ai"
+                  href="mailto:hello@promptodactyl.com"
                   className="text-blue-600 hover:text-blue-700"
                 >
-                  privacy@promptodactyl.com
+                  hello@promptodactyl.com
                 </a>
               </p>
               <p className="font-medium text">The Promptodactyl Team</p>
