@@ -268,29 +268,54 @@ const handleEnhance = async () => {
 
       {/* Input Section */}
       <section className="w-full max-w-3xl pt-4" aria-label="Prompt input">
-        <div className="flex justify-end mb-2">
+        <div className="flex justify-between mb-2">
+  {/* Envelope suggestions button */}
+ <button
+  onClick={() => {
+    window.location.href = "mailto:hello@promptodactyl.com";
+  }}
+  className="p-2 rounded hover:bg-gray-100 transition"
+  aria-label="Email Promptodactyl"
+>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className="h-5 w-5 text-gray-600"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth={2}
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M4 4h16v16H4V4zm16 2l-8 6-8-6"
+    />
+  </svg>
+</button>
+
+  {/* Existing history button */}
   <button
     onClick={() => setShowHistory(true)}
     className="p-2 rounded hover:bg-gray-100 transition"
     aria-label="Show history"
   >
-   <svg
-  xmlns="http://www.w3.org/2000/svg"
-  className="h-5 w-5 text-gray-600"
-  fill="none"
-  viewBox="0 0 24 24"
-  stroke="currentColor"
-  strokeWidth={2}
->
-  <path
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    d="M3 12a9 9 0 1118 0M3 12h3m-3 0l2-2m-2 2l2 2m7-6v6l3 3"
-  />
-</svg>
-
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className="h-5 w-5 text-gray-600"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 12a9 9 0 1118 0M3 12h3m-3 0l2-2m-2 2l2 2m7-6v6l3 3"
+      />
+    </svg>
   </button>
 </div>
+
 
         <label htmlFor="prompt-input" className="sr-only">
           Enter your prompt
