@@ -5,8 +5,8 @@ inject();
 import Rating from "./Rating";
 import History from "./History";
 import SuggestionCards from "./SuggestionCards";
-import envelopeIcon from "@assets/icons/envelope.svg";
-import historyIcon from "@assets/icons/bookmark.svg";
+import envelopeIcon from "@assets/envelope.svg";
+import historyIcon from "@assets/bookmark.svg";
 
 
 export default function App() {
