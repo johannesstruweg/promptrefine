@@ -7,6 +7,33 @@ import History from "./History";
 import SuggestionCards from "./SuggestionCards";
 import envelopeIcon from "./assets/envelope.svg";
 import historyIcon from "./assets/bookmark.svg";
+import staticLogo from "./assets/Promptodactyl_logo.png";
+import animatedLogo from "./assets/Terry_flapping4.gif";
+
+function Logo() {
+  const [loaded, setLoaded] = useState(false);
+
+  return (
+    <div className="relative mx-auto mb-4 w-56 h-auto">
+      <img
+        src={staticLogo}
+        alt="Promptodactyl Static Logo"
+        className={`w-full h-auto absolute inset-0 transition-opacity duration-500 ${
+          loaded ? "opacity-0" : "opacity-100"
+        }`}
+      />
+
+      <img
+        src={animatedLogo}
+        alt="Promptodactyl Animated Logo"
+        className={`w-full h-auto transition-opacity duration-500 ${
+          loaded ? "opacity-100" : "opacity-0"
+        }`}
+        onLoad={() => setLoaded(true)}
+      />
+    </div>
+  );
+}
 
 
 export default function App() {
@@ -259,14 +286,11 @@ const handleEnhance = async () => {
   return (
     <main className="min-h-screen bg-white flex flex-col items-center justify-start p-6">
       {/* Header */}
-      <header className="text-center mb-8">
-        <img 
-          src="/Promptodactyl_logo.png" 
-          alt="Promptodactyl Logo" 
-          className="mx-auto mb-4 w-56 h-auto" 
-        />
-        <p className="text-gray-600 text-lg">Prompts that take flight</p>
-      </header>
+     <header className="text-center mb-8">
+  <Logo />
+  <p className="text-gray-600 text-lg">Prompts that take flight</p>
+</header>
+
 
       {/* Input Section */}
       <section className="w-full max-w-3xl pt-4" aria-label="Prompt input">
