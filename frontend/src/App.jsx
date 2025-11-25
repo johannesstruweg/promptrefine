@@ -187,30 +187,36 @@ const handleCopy = async () => {
   setEnhanceError(null);
 
   try {
-    const response = await axios.post(
-  `${API_URL}/refine`,
-  { text: trimmed },
-  { signal: refineControllerRef.current.signal }
-);
+  const response = await axios.post(
+    `${API_URL}/refine`,
+    { text: trimmed },
+    { signal: refineControllerRef.current.signal }
+  );
 
-    setRes(response.data);
-    setModelUsed(response.data.model);
-   // Save to local history (max 5)
-try {
-  const prev = JSON.parse(localStorage.getItem("prompt_history") || "[]");
+  setRes(response.data);
 
-  const entry = {
-    id: Date.now(),
-    before: trimmed,
-    after: response.data.after,
-    ts: Date.now()
-  };
+  // Clean the model name, remove date suffix like "-2025-11-13"
+  const rawModel = response.data.model || "ChatGPT";
+  const cleanModel = rawModel.replace(/-\d{4}-\d{2}-\d{2}$/, "");
+  setModelUsed(cleanModel);
 
-  const updated = [entry, ...prev].slice(0, 5);
-  localStorage.setItem("prompt_history", JSON.stringify(updated));
-} catch (err) {
-  console.error("History save failed:", err);
-}
+  // Save to local history (max 5)
+  try {
+    const prev = JSON.parse(localStorage.getItem("prompt_history") || "[]");
+
+    const entry = {
+      id: Date.now(),
+      before: trimmed,
+      after: response.data.after,
+      ts: Date.now()
+    };
+
+    const updated = [entry, ...prev].slice(0, 5);
+    localStorage.setItem("prompt_history", JSON.stringify(updated));
+  } catch (err) {
+    console.error("History save failed:", err);
+  }
+
 
     setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
   } catch (err) {
