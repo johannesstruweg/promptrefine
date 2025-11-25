@@ -49,6 +49,7 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [showPolicy, setShowPolicy] = useState(false);
   const [enterToSubmit, setEnterToSubmit] = useState(true);
+  const [modelUsed, setModelUsed] = useState(null);
 
   const [audience, setAudience] = useState("");
   const [outcome, setOutcome] = useState("");
@@ -193,6 +194,7 @@ const handleCopy = async () => {
 );
 
     setRes(response.data);
+    setModelUsed(response.data.model);
    // Save to local history (max 5)
 try {
   const prev = JSON.parse(localStorage.getItem("prompt_history") || "[]");
@@ -522,10 +524,12 @@ const handleEnhance = async () => {
   onReinsert={handleReinsert}
 />
 
-      {/* Footer */}
+     {/* Footer */}
 <footer className="text-center mt-16 mb-2 text-gray-500 text-sm relative z-10">
   <p>
-    Powered by ChatGPT <br /> © 2025 Promptodactyl by{" "}
+    Powered by {modelUsed ? modelUsed : "ChatGPT"}
+    <br />
+    © 2025 Promptodactyl by{" "}
     <a
       href="https://stratagentic.ai"
       target="_blank"
@@ -546,6 +550,7 @@ const handleEnhance = async () => {
     </button>
   </div>
 </footer>
+
 
       {/* Privacy Policy Popup */}
       {showPolicy && (
