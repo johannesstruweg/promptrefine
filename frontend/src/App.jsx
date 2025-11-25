@@ -308,25 +308,25 @@ const handleEnhance = async () => {
   onClick={() => {
     window.location.href = "mailto:hello@promptodactyl.com";
   }}
-  className="p-2 rounded hover:bg-gray-100 transition"
+  className="p-2 rounded hover:bg-gray-50 transition"
   aria-label="Email Promptodactyl"
 >
   <img
     src={envelopeIcon}
     alt="Email Promptodactyl"
-    className="h-5 w-5 icon-medium opacity-80 hover:opacity-100"  />
+    className="h-5 w-5 icon-medium opacity-50 hover:opacity-80"  />
 </button>
 
   {/* History button */}
   <button
   onClick={() => setShowHistory(true)}
-  className="p-2 rounded hover:bg-gray-100 transition"
+  className="p-2 rounded hover:bg-gray-50 transition"
   aria-label="Show history"
 >
   <img
     src={historyIcon}
     alt="History"
-    className="h-5 w-5 icon-medium opacity-80 hover:opacity-100"
+    className="h-5 w-5 icon-medium opacity-50 hover:opacity-80"
     />
 </button>
 </div>
