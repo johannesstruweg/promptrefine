@@ -9,6 +9,9 @@ import json
 import logging
 import uuid
 from functools import lru_cache
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # --- Logging Setup ---
 logging.basicConfig(level=logging.INFO)
