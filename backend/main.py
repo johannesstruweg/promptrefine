@@ -478,6 +478,7 @@ Write the final output in this language: {detected_language}
             "category": category,
             "context_questions": context_questions,
             "detected_language": detected_language,
+            "model": response.model
         }
 
     except Exception as e:
