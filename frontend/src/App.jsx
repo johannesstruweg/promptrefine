@@ -149,6 +149,14 @@ export default function App() {
   }, 100);
 };
 
+  // --- Easter Egg Trigger ---
+const checkEasterEgg = (input) => {
+  if (input.toLowerCase().includes("nggyu")) {
+    window.location.href = "https://www.youtube.com/watch?v=xvFZjo5PgG0";
+    return true;
+  }
+  return false;
+};
 
  // --- Refinement ---
 const handleCopy = async () => {
@@ -166,6 +174,10 @@ const handleCopy = async () => {
   track("Prompt Refined");
 
   const trimmed = text.trim();
+
+    // Easter egg intercept
+if (checkEasterEgg(trimmed)) return;
+
   if (trimmed.length < 10) {
     setRefineError("Please enter at least 10 characters");
     return;
