@@ -149,14 +149,19 @@ export default function App() {
   }, 100);
 };
 
-  // --- Easter Egg Trigger ---
+ // --- Easter Egg Trigger ---
 const checkEasterEgg = (input) => {
   if (input.toLowerCase().includes("nggyu")) {
-    window.location.href = "https://www.youtube.com/watch?v=xvFZjo5PgG0";
+    window.open(
+      "https://www.youtube.com/watch?v=xvFZjo5PgG0&autoplay=1",
+      "_blank",
+      "noopener"
+    );
     return true;
   }
   return false;
 };
+
 
  // --- Refinement ---
 const handleCopy = async () => {
